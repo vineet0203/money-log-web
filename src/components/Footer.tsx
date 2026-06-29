@@ -11,8 +11,6 @@ export default function Footer() {
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-white transition-colors">Home</button>
           <span className="text-gray-600">•</span>
           <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button>
-          <span className="text-gray-600">•</span>
-          <button onClick={() => scrollToSection('review')} className="hover:text-white transition-colors">Reviews</button>
         </div>
         
         <div className="text-sm text-gray-500 flex flex-wrap justify-center gap-x-4">

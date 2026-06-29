@@ -43,11 +43,11 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-700">
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-black transition-colors">
+            Home
+          </button>
           <button onClick={() => scrollToSection('features')} className="hover:text-black transition-colors">
             Features
-          </button>
-          <button onClick={() => scrollToSection('review')} className="hover:text-black transition-colors">
-            Reviews
           </button>
         </div>
 
