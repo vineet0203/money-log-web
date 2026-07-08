@@ -112,6 +112,20 @@ export function Sidebar() {
     }));
   };
 
+  const allHrefs = React.useMemo(() => {
+    return menuItems.flatMap(item => 
+      item.items ? item.items.map(sub => sub.href) : [item.href]
+    ).filter(Boolean) as string[];
+  }, []);
+
+  const longestMatch = allHrefs
+    .filter(href => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  const isPathActive = (href?: string) => {
+    return !!href && href === longestMatch;
+  };
+
   return (
     <>
       {/* Mobile Top Header (Visible only on mobile) */}
@@ -201,69 +215,76 @@ export function Sidebar() {
         )}
 
         {/* Navigation */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1 ${isCollapsed ? 'pt-2 pb-6' : 'py-6'}`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar space-y-1 ${isCollapsed ? 'pt-2 pb-6' : 'py-6'}`}>
         {menuItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.items && item.items.some(subItem => pathname === subItem.href));
+          const isActive = isPathActive(item.href) || (item.items && item.items.some(subItem => isPathActive(subItem.href)));
           const isOpen = openMenus[item.title];
 
           if (item.href) {
             // Single Link Item
             return (
-              <Link 
-                key={index} 
-                href={item.href}
-                className={`flex text-sm items-center ${isCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl transition-all duration-200 group ${
-                  isActive 
-                    ? 'bg-[#159A1D] text-white shadow-md shadow-green-900/20' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                }`}
-                title={isCollapsed ? item.title : undefined}
-              >
-                <Icon size={20} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`} />
-                {!isCollapsed && <span className="font-medium">{item.title}</span>}
-              </Link>
+              <div key={index} className={`px-3 py-2 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-2' : ''}`}>
+                <div className="relative">
+                  {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
+                  <Link 
+                    href={item.href}
+                    className={`flex text-sm items-center ${isCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl transition-all duration-200 group ${
+                      isActive 
+                        ? 'bg-[#159A1D] text-white shadow-md' 
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                    title={isCollapsed ? item.title : undefined}
+                  >
+                    <Icon size={20} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`} />
+                    {!isCollapsed && <span className="font-medium">{item.title}</span>}
+                  </Link>
+                </div>
+              </div>
             );
           }
 
           // Expandable Item
           return (
-            <div key={index} className="mb-1">
-              <button
-                onClick={() => toggleMenu(item.title)}
-                className={`w-full flex text-sm items-center ${isCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl transition-all duration-200 group ${
-                  isActive && isCollapsed
-                    ? 'bg-slate-800 text-white' 
-                    : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
-                }`}
-                title={isCollapsed ? item.title : undefined}
-              >
-                <Icon size={20} className="flex-shrink-0" />
-                {!isCollapsed && (
-                  <>
-                    <span className="flex-1 text-left font-medium">{item.title}</span>
-                    <span className="text-slate-500 transition-transform duration-200">
-                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    </span>
-                  </>
-                )}
-              </button>
+            <div key={index} className={`px-3 py-2 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-2' : ''}`}>
+              <div className="relative">
+                {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
+                <button
+                  onClick={() => toggleMenu(item.title)}
+                  className={`w-full flex text-sm items-center ${isCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl transition-all duration-200 group ${
+                    isActive
+                      ? 'bg-[#159A1D] text-white shadow-md' 
+                      : 'text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
+                  }`}
+                  title={isCollapsed ? item.title : undefined}
+                >
+                  <Icon size={20} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  {!isCollapsed && (
+                    <>
+                      <span className="flex-1 text-left font-medium">{item.title}</span>
+                      <span className={`transition-transform duration-200 ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               {/* Sub-menu */}
               {!isCollapsed && isOpen && item.items && (
-                <div className="mt-0.5 mb-1 space-y-0.5 pl-4 pr-3 border-l-2 border-slate-800 ml-5 py-0.5">
+                <div className="mt-2 mb-1 space-y-2 pl-11 pr-3">
                   {item.items.map((subItem, subIndex) => {
-                    const isSubActive = pathname === subItem.href;
+                    const isSubActive = isPathActive(subItem.href);
                     return (
                       <Link
                         key={subIndex}
                         href={subItem.href}
-                        className={`flex items-center gap-3 py-1.5 px-3 rounded-lg text-sm transition-colors relative ${
-                          isSubActive ? 'text-white font-medium bg-slate-800/50' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
+                        className={`flex items-center gap-3 py-1.5 px-3 rounded-lg text-sm transition-colors ${
+                          isSubActive ? 'text-white font-medium bg-slate-800/50' : 'text-slate-200 hover:text-white hover:bg-slate-800/30'
                         }`}
                       >
-                        {/* Green dot for active sub items */}
-                        <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-[#159A1D]' : 'bg-[#159A1D]/40 group-hover:bg-[#159A1D]/70'}`} />
+                        {/* Green dot for all sub items */}
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#159A1D] flex-shrink-0" />
                         {subItem.title}
                       </Link>
                     );

@@ -1,5 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -20,18 +21,12 @@ export default function Hero() {
             your wealth.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <button className="group flex items-center justify-center px-6 py-3.5 text-base font-semibold text-white bg-brand-green hover:bg-brand-green-dark rounded-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-green/30 active:scale-95 shadow-lg shadow-brand-green/20">
+            <Link href="/login" className="group flex items-center justify-center px-6 py-3.5 text-base font-semibold text-white bg-brand-green hover:bg-brand-green-dark rounded-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-green/30 active:scale-95 shadow-lg shadow-brand-green/20">
               Get Started Free
               <div className="ml-3 bg-white rounded-full p-1 transition-transform duration-200 group-hover:translate-x-1">
                 <ArrowUpRight className="w-4 h-4 text-brand-green stroke-[3]" />
               </div>
-            </button>
-            <button className="group flex items-center justify-center px-6 py-3.5 text-base font-semibold text-brand-green bg-white border border-brand-green hover:bg-brand-green/5 rounded-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95">
-              Live Demo
-              <div className="ml-3 bg-brand-green rounded-full p-1 transition-transform duration-200 group-hover:translate-x-1">
-                <ArrowUpRight className="w-4 h-4 text-white stroke-[3]" />
-              </div>
-            </button>
+            </Link>
           </div>
         </div>
 

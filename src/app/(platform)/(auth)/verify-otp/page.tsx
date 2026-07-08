@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { OTPInput } from '@/components/ui/otp-input';
 
 export default function VerifyOtpPage() {
+  const router = useRouter();
   const [otp, setOtp] = useState('');
   const [timeLeft, setTimeLeft] = useState(60);
 
@@ -30,6 +32,7 @@ export default function VerifyOtpPage() {
     if (otp.length === 6) {
       // Proceed with verification (e.g. API call)
       console.log('Verifying OTP:', otp);
+      router.push('/dashboard');
     }
   };
 

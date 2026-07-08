@@ -12,7 +12,7 @@ export function Header() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h1>
         {description && (
-          <p className="text-gray-500 mt-1 md:mt-2 text-sm md:text-base">{description}</p>
+          <p className="text-gray-500 mt-0 text-sm md:text-base">{description}</p>
         )}
       </div>
 
