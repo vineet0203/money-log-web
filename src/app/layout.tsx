@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "moneylog",
     images: [
       {
-        url: "/logo/logo.png",
+        url: "https://moneylog.com/logo/logo.png",
         width: 800,
         height: 800,
         alt: "moneylog Logo",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "moneylog - Track Money, Manage Life, Build Wealth",
     description: "All-in-one personal finance to track transactions, manage subscriptions, monitor P&L balance, payables & receivables.",
-    images: ["/logo/logo.png"],
+    images: ["https://moneylog.com/logo/logo.png"],
   },
 };
 
