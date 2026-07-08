@@ -15,9 +15,32 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "moneylog - Track Money, Manage Life, Build Wealth",
   description: "All-in-one personal finance to track transactions, manage subscriptions, monitor P&L balance, payables & receivables.",
+  metadataBase: new URL("https://moneylog.com"),
   icons: {
     icon: "/logo/logo.png",
-  }
+  },
+  openGraph: {
+    title: "moneylog - Track Money, Manage Life, Build Wealth",
+    description: "All-in-one personal finance to track transactions, manage subscriptions, monitor P&L balance, payables & receivables.",
+    url: "https://moneylog.com",
+    siteName: "moneylog",
+    images: [
+      {
+        url: "/logo/logo.png",
+        width: 800,
+        height: 800,
+        alt: "moneylog Logo",
+      }
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "moneylog - Track Money, Manage Life, Build Wealth",
+    description: "All-in-one personal finance to track transactions, manage subscriptions, monitor P&L balance, payables & receivables.",
+    images: ["/logo/logo.png"],
+  },
 };
 
 export default function RootLayout({
