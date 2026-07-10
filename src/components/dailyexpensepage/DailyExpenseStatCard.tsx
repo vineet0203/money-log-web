@@ -8,6 +8,7 @@ interface DailyExpenseStatCardProps {
   percentChange: string;
   percentColor: string; // e.g., 'text-red-500'
   subtext: string;
+  icon?: React.ReactNode;
 }
 
 export function DailyExpenseStatCard({ 
@@ -16,13 +17,14 @@ export function DailyExpenseStatCard({
   valueColor = 'text-[#159A1D]', 
   percentChange, 
   percentColor, 
-  subtext 
+  subtext,
+  icon
 }: DailyExpenseStatCardProps) {
   return (
     <div className="bg-white rounded-[20px] p-4 xl:p-6 shadow-sm border border-slate-100 flex items-center gap-3 xl:gap-5 overflow-hidden">
       {/* Icon squircle */}
       <div className="w-12 h-12 xl:w-16 xl:h-16 rounded-[14px] xl:rounded-[18px] bg-[#159A1D] flex items-center justify-center shrink-0">
-        <RefreshCw className="w-6 h-6 xl:w-7 xl:h-7 text-white" />
+        {icon ? icon : <RefreshCw className="w-6 h-6 xl:w-7 xl:h-7 text-white" />}
       </div>
 
       <div className="flex flex-col gap-1 overflow-hidden">

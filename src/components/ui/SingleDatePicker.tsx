@@ -5,9 +5,10 @@ interface SingleDatePickerProps {
   date?: string;
   onChange?: (date: string) => void;
   className?: string;
+  type?: 'date' | 'month';
 }
 
-export function SingleDatePicker({ date, onChange, className = '' }: SingleDatePickerProps) {
+export function SingleDatePicker({ date, onChange, className = '', type = 'date' }: SingleDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [localDate, setLocalDate] = useState(date || new Date().toISOString().split('T')[0]);
@@ -24,8 +25,14 @@ export function SingleDatePicker({ date, onChange, className = '' }: SingleDateP
   }, []);
 
   const formatDisplayDate = (dateString: string) => {
-    if (!dateString) return 'Select Date';
+    if (!dateString) return type === 'month' ? 'Select Month' : 'Select Date';
     try {
+      if (type === 'month') {
+        const [year, month] = dateString.split('-');
+        const dateObj = new Date(parseInt(year), parseInt(month) - 1);
+        return dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      }
+
       const dateObj = new Date(dateString);
       const today = new Date();
       
@@ -67,9 +74,9 @@ export function SingleDatePicker({ date, onChange, className = '' }: SingleDateP
         <div className="absolute right-0 z-50 w-64 mt-2 bg-white border border-slate-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-500">Select Date</label>
+              <label className="text-xs font-bold text-slate-500">{type === 'month' ? 'Select Month' : 'Select Date'}</label>
               <input 
-                type="date" 
+                type={type} 
                 value={localDate}
                 onChange={(e) => setLocalDate(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-slate-700"
