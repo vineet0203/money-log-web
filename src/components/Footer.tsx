@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { scrollToSection } from "@/lib/utils";
 
 export default function Footer() {
@@ -13,12 +14,31 @@ export default function Footer() {
           <button onClick={() => scrollToSection('features')} className="hover:text-white transition-colors">Features</button>
         </div>
         
-        <div className="text-sm text-gray-500 flex flex-wrap justify-center gap-x-4">
+        <div className="text-sm text-gray-500 flex flex-wrap justify-center gap-x-4 mb-6">
           <p>© 2026 MoneyLog. All Rights Reserved</p>
           <span className="text-gray-600 hidden sm:inline">|</span>
           <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
           <span className="text-gray-600 hidden sm:inline">|</span>
           <Link href="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link>
+        </div>
+
+        <div className="flex flex-col items-center gap-3 pt-6 border-t border-gray-800/50 w-full max-w-sm">
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-widest">A Product By</p>
+          <a 
+            href="https://www.computerlog.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:opacity-80 transition-opacity"
+          >
+            <Image 
+              src="/logo/computerlog.png" 
+              alt="Computerlog" 
+              width={220} 
+              height={60} 
+              style={{ width: '180px', height: 'auto', objectFit: 'contain' }}
+              className="object-contain"
+            />
+          </a>
         </div>
       </div>
     </footer>
