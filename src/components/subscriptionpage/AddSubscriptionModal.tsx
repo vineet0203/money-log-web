@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { useGetCategories } from '@/hooks/queries/categories';
+import { useAddSubscription } from '@/hooks/queries/subscriptions';
 
 interface Props {
   isOpen: boolean;
@@ -12,6 +14,12 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
   const [billingCycle, setBillingCycle] = useState<'Monthly' | 'Yearly'>('Monthly');
   const [startDate, setStartDate] = useState('2026-06-27');
   const [rate, setRate] = useState('');
+  const [name, setName] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const { data: categories = [] } = useGetCategories();
+  const { mutateAsync: addSubscription, isPending } = useAddSubscription();
 
   const handleRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow digits and dots (no commas)
@@ -26,9 +34,29 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
     setRate(val);
   };
 
-  const handleSubmit = () => {
-    // mock submit action
-    onClose();
+  const handleSubmit = async () => {
+    setErrorMsg('');
+    if (!name.trim() || !rate || !startDate || !categoryId) {
+      setErrorMsg('Please fill out all fields');
+      return;
+    }
+
+    try {
+      await addSubscription({
+        name,
+        amount: parseFloat(rate),
+        billing_cycle: billingCycle.toLowerCase(),
+        start_date: startDate,
+        category_id: parseInt(categoryId, 10),
+      });
+      // Reset and close
+      setName('');
+      setRate('');
+      setCategoryId('');
+      onClose();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.error || 'Failed to add subscription');
+    }
   };
 
   return (
@@ -37,9 +65,14 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
       onClose={onClose}
       onSubmit={handleSubmit}
       title="Add Subscription"
-      submitText="Add Subscription"
+      submitText={isPending ? 'Adding...' : 'Add Subscription'}
     >
       <div className="space-y-6">
+        {errorMsg && (
+          <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm font-medium">
+            {errorMsg}
+          </div>
+        )}
         {/* Name */}
         <div>
           <label className="block text-sm font-bold text-[#4F627A] mb-1.5">
@@ -47,6 +80,8 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
           </label>
           <input 
             type="text" 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Netflix, Spotify" 
             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-sm text-slate-900 placeholder:text-slate-400 font-medium shadow-sm"
           />
@@ -102,17 +137,13 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
           <Select 
             label="Category"
             placeholder="Tap to select a category"
+            value={categoryId}
+            onChange={setCategoryId}
             className="shadow-sm text-slate-400"
-            options={[
-              { value: 'entertainment', label: 'Entertainment' },
-              { value: 'productivity', label: 'Productivity' },
-              { value: 'utilities', label: 'Utilities' },
-              { value: 'health_fitness', label: 'Health & Fitness' },
-              { value: 'education', label: 'Education' },
-              { value: 'finance', label: 'Finance' },
-              { value: 'software', label: 'Software' },
-              { value: 'food_delivery', label: 'Food & Delivery' },
-            ]}
+            options={categories.map(c => ({
+              value: c.id.toString(),
+              label: c.name
+            }))}
           />
         </div>
 

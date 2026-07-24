@@ -46,13 +46,48 @@ export function DataTable<T>({
               </tr>
             </thead>
             <tbody>
-              {[...Array(5)].map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-slate-50 animate-pulse">
-                  {columns.map((_, colIndex) => (
-                    <td key={colIndex} className="px-6 py-5">
-                      <div className="h-4 bg-slate-200 rounded w-full max-w-[80%]"></div>
-                    </td>
-                  ))}
+              {[...Array(10)].map((_, rowIndex) => (
+                <tr key={rowIndex} className="border-b border-slate-50">
+                  {columns.map((col, colIndex) => {
+                    let skeletonContent;
+                    
+                    if (col.key === 'name' || col.header === 'Subscription') {
+                      skeletonContent = (
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
+                          <div className="h-4 bg-slate-200 rounded w-24"></div>
+                        </div>
+                      );
+                    } else if (col.key === 'dueDate' || col.header === 'Due Date') {
+                      skeletonContent = (
+                        <div className="flex flex-col gap-2">
+                          <div className="h-3 bg-slate-200 rounded w-20"></div>
+                          <div className="h-3 bg-slate-200 rounded w-16"></div>
+                        </div>
+                      );
+                    } else if (col.key === 'amount' || col.header === 'Amount') {
+                      skeletonContent = (
+                        <div className="flex flex-col gap-2">
+                          <div className="h-4 bg-slate-200 rounded w-12"></div>
+                          <div className="h-3 bg-slate-200 rounded w-16"></div>
+                        </div>
+                      );
+                    } else if (col.key === 'status' || col.header === 'Status') {
+                      skeletonContent = <div className="h-6 bg-slate-200 rounded-md w-16"></div>;
+                    } else if (col.key === 'action' || col.header === 'Action') {
+                      skeletonContent = <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>;
+                    } else {
+                      skeletonContent = <div className="h-4 bg-slate-200 rounded w-full max-w-[80%]"></div>;
+                    }
+
+                    return (
+                      <td key={colIndex} className="px-6 py-5">
+                        <div className="animate-pulse flex">
+                          {skeletonContent}
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

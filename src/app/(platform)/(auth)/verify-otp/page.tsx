@@ -2,15 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Star } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Star, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { OTPInput } from '@/components/ui/otp-input';
+import { useVerifyOtp, useSendOtp } from '@/hooks/queries/auth';
+import { Suspense } from 'react';
 
-export default function VerifyOtpPage() {
+function VerifyOtpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const phone = searchParams.get('phone');
+
   const [otp, setOtp] = useState('');
   const [timeLeft, setTimeLeft] = useState(60);
+  const [error, setError] = useState<string | null>(null);
+
+  const verifyOtpMutation = useVerifyOtp();
+  const sendOtpMutation = useSendOtp();
+
+  useEffect(() => {
+    if (!phone) {
+      router.push('/login');
+    }
+  }, [phone, router]);
 
   useEffect(() => {
     if (timeLeft <= 0) return;
@@ -21,18 +36,31 @@ export default function VerifyOtpPage() {
   }, [timeLeft]);
 
   const handleResend = () => {
-    if (timeLeft === 0) {
-      // Trigger resend logic here
-      setTimeLeft(60);
+    if (timeLeft === 0 && phone) {
+      setError(null);
+      sendOtpMutation.mutate(phone, {
+        onSuccess: () => setTimeLeft(60),
+        onError: (err: any) => setError(err.response?.data?.error || 'Failed to resend code.')
+      });
     }
   };
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length === 6) {
-      // Proceed with verification (e.g. API call)
-      console.log('Verifying OTP:', otp);
-      router.push('/dashboard');
+    if (otp.length === 6 && phone) {
+      setError(null);
+      verifyOtpMutation.mutate({ phone, code: otp }, {
+        onSuccess: (data: any) => {
+          if (data.isProfileComplete) {
+            router.push('/dashboard');
+          } else {
+            router.push('/complete-profile');
+          }
+        },
+        onError: (err: any) => {
+          setError(err.response?.data?.error || 'Invalid code. Please try again.');
+        }
+      });
     }
   };
 
@@ -99,13 +127,14 @@ export default function VerifyOtpPage() {
             </div>
 
             <div className="pt-2">
+              {error && <p className="text-red-500 text-sm mb-4 text-center">{error}</p>}
               <Button 
                 type="submit" 
                 size="lg" 
                 className="w-full shadow-md"
-                disabled={otp.length !== 6}
+                disabled={otp.length !== 6 || verifyOtpMutation.isPending}
               >
-                Verify
+                {verifyOtpMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify'}
               </Button>
             </div>
           </form>
@@ -118,9 +147,14 @@ export default function VerifyOtpPage() {
             ) : (
               <>
                 Didn&apos;t receive code?{' '}
-                <button onClick={handleResend} type="button" className="font-semibold text-[#159A1D] hover:underline focus:outline-none">
-                  Resend
-                </button>
+                  <button 
+                    onClick={handleResend} 
+                    type="button" 
+                    disabled={sendOtpMutation.isPending}
+                    className="font-semibold text-[#159A1D] hover:underline focus:outline-none disabled:opacity-50"
+                  >
+                    {sendOtpMutation.isPending ? 'Resending...' : 'Resend'}
+                  </button>
               </>
             )}
           </p>
@@ -128,5 +162,17 @@ export default function VerifyOtpPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#159A1D]">
+        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      </div>
+    }>
+      <VerifyOtpContent />
+    </Suspense>
   );
 }

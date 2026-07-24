@@ -1,49 +1,74 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Calendar, ChevronDown } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
-
-interface Subscription {
-  id: string;
-  name: string;
-  dueDate: string;
-  daysLeft: number;
-  amount: string;
-  status: string;
-}
-
-const mockData: Subscription[] = [
-  { id: '1', name: 'Netflix', dueDate: '10-03-2026', daysLeft: 5, amount: '$100.00', status: 'Ongoing' },
-  { id: '2', name: 'Canva', dueDate: '12-03-2026', daysLeft: 1, amount: '$100.00', status: 'Ongoing' },
-  { id: '3', name: 'Amazon', dueDate: '12-03-2026', daysLeft: 10, amount: '$100.00', status: 'Ongoing' },
-  { id: '4', name: 'Zomato', dueDate: '12-03-2026', daysLeft: 1, amount: '$100.00', status: 'Ongoing' },
-  { id: '5', name: 'Flipkart', dueDate: '12-03-2026', daysLeft: 1, amount: '$100.00', status: 'Ongoing' },
-  { id: '6', name: 'Spotify', dueDate: '12-03-2026', daysLeft: 1, amount: '$100.00', status: 'Ongoing' },
-];
+import { useGetSubscriptions } from '@/hooks/queries/subscriptions';
+import { useGetCategories } from '@/hooks/queries/categories';
+import { SubscriptionActionMenu } from './SubscriptionActionMenu';
 
 export function SubscriptionDetailsTable() {
-  const [activeTab, setActiveTab] = useState('On going');
+  const [activeTab, setActiveTab] = useState('All');
+  const [page, setPage] = useState(1);
+  const [categoryId, setCategoryId] = useState('all');
+  const itemsPerPage = 8;
 
-  const columns: Column<Subscription>[] = [
+  // Reset page when tab or category changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+  
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setCategoryId(e.target.value);
+    setPage(1);
+  };
+
+  const { data: response, isLoading } = useGetSubscriptions(page, itemsPerPage, activeTab, categoryId);
+  const { data: categories = [] } = useGetCategories();
+
+  // Transform backend data for the DataTable
+  const tableData = (response?.data || []).map(sub => {
+    const d = new Date(sub.next_billing_date);
+    const dueDate = `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()}`;
+    return {
+      id: sub.id.toString(),
+      name: sub.name,
+      category: sub.category_name || 'Uncategorized',
+      dueDate,
+      daysLeft: sub.days_left,
+      amount: `$${Number(sub.amount).toFixed(2)}`,
+      billingCycle: sub.billing_cycle,
+      status: sub.computed_status,
+      dbStatus: sub.status
+    };
+  });
+
+  const columns: Column<any>[] = [
+    {
+      key: 'name',
+      header: 'Subscription',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#1CD491] text-white flex items-center justify-center font-bold text-sm shrink-0">
+            {row.name.charAt(0)}
+          </div>
+          <span className="text-slate-900 font-semibold">{row.name}</span>
+        </div>
+      )
+    },
     {
       key: 'category',
       header: 'Category',
       render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#1CD491] text-white flex items-center justify-center font-bold text-sm">
-            {row.name.charAt(0)}
-          </div>
-          <span className="text-[#849AB4] font-medium">{row.name}</span>
-        </div>
+        <span className="text-[#849AB4] font-medium">{row.category}</span>
       )
     },
     {
       key: 'dueDate',
       header: 'Due Date',
       render: (row) => (
-        <div className="flex flex-col">
-          <span className="text-[#849AB4] text-sm">{row.dueDate}</span>
-          <span className={`text-xs font-bold mt-1 ${row.daysLeft <= 1 ? 'text-[#EF4444]' : 'text-[#159A1D]'}`}>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[#849AB4] text-sm leading-none">{row.dueDate}</span>
+          <span className={`text-xs font-bold leading-none ${row.daysLeft <= 1 ? 'text-[#EF4444]' : 'text-[#159A1D]'}`}>
             In {row.daysLeft} {row.daysLeft === 1 ? 'Days' : 'Days'}
           </span>
         </div>
@@ -52,24 +77,37 @@ export function SubscriptionDetailsTable() {
     {
       key: 'amount',
       header: 'Amount',
-      render: (row) => <span className="text-[#849AB4]">{row.amount}</span>
+      render: (row) => (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-slate-900 font-bold leading-none">{row.amount}</span>
+          <span className="text-xs text-[#849AB4] capitalize leading-none">{row.billingCycle}</span>
+        </div>
+      )
     },
     {
       key: 'status',
       header: 'Status',
-      render: (row) => (
-        <span className="bg-[#E7F8F0] text-[#159A1D] px-3 py-1 rounded-md text-xs font-bold border border-[#C5ECD9]">
-          {row.status}
-        </span>
-      )
+      render: (row) => {
+        let colorClasses = 'bg-[#E7F8F0] text-[#159A1D] border-[#C5ECD9]'; // Ongoing/Default
+        
+        if (row.status === 'Inactive') {
+          colorClasses = 'bg-red-50 text-red-600 border-red-200';
+        } else if (row.status === 'Upcoming') {
+          colorClasses = 'bg-blue-50 text-blue-600 border-blue-200';
+        }
+
+        return (
+          <span className={`px-3 py-1 rounded-md text-xs font-bold border ${colorClasses}`}>
+            {row.status}
+          </span>
+        );
+      }
     },
     {
       key: 'action',
       header: 'Action',
       render: (row) => (
-        <Link href={`/subscriptions/${row.id}`} className="text-[#159A1D] font-bold text-sm hover:underline">
-          View
-        </Link>
+        <SubscriptionActionMenu subscriptionId={row.id} status={row.dbStatus} />
       )
     }
   ];
@@ -79,44 +117,53 @@ export function SubscriptionDetailsTable() {
       {/* Header */}
       <div className="p-6 pb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">Subscriptions</h2>
-        <div className="relative">
-          <button className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-            <Calendar size={16} className="text-slate-400" />
-            <span className="font-medium">Today, 31 March</span>
-            <ChevronDown size={14} className="text-slate-400 ml-1" />
-          </button>
-        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-6 border-b border-slate-100 flex gap-2">
-        {['On going', 'Upcoming', 'Inactive'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-8 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-[3px] ${
-              activeTab === tab 
-                ? 'bg-slate-100 text-slate-900 border-[#159A1D]' 
-                : 'bg-slate-50 text-slate-500 border-transparent hover:bg-slate-100/50'
-            }`}
+      {/* Tabs and Filter */}
+      <div className="px-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex gap-2">
+          {['All', 'Ongoing', 'Upcoming', 'Inactive'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => handleTabChange(tab)}
+              className={`px-8 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-[3px] ${
+                activeTab === tab 
+                  ? 'bg-slate-100 text-slate-900 border-[#159A1D]' 
+                  : 'text-[#849AB4] border-transparent hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        
+        <div className="py-2">
+          <select 
+            value={categoryId}
+            onChange={handleCategoryChange}
+            className="px-4 py-1.5 text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-[#159A1D]"
           >
-            {tab}
-          </button>
-        ))}
+            <option value="all">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Table */}
       <div className="p-0">
         <DataTable 
           columns={columns} 
-          data={mockData} 
+          data={tableData} 
+          isLoading={isLoading}
           pagination={{ 
-            currentPage: 1, 
-            totalPages: 4, 
-            totalItems: 32,
-            itemsPerPage: 8,
+            currentPage: response?.pagination?.currentPage || 1, 
+            totalPages: response?.pagination?.totalPages || 1, 
+            totalItems: response?.pagination?.totalItems || 0,
+            itemsPerPage: response?.pagination?.itemsPerPage || itemsPerPage,
             itemName: 'subscriptions',
-            onPageChange: () => {} 
+            onPageChange: (newPage) => setPage(newPage)
           }}
         />
       </div>

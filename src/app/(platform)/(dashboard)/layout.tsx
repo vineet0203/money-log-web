@@ -2,6 +2,7 @@ import React from 'react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { AppDataProvider } from '@/providers/AppDataProvider';
+import { ProfileGatekeeper } from '@/components/auth/ProfileGatekeeper';
 
 export default function DashboardLayout({
   children,
@@ -10,8 +11,9 @@ export default function DashboardLayout({
 }) {
   return (
     <AppDataProvider>
-      <div className="flex flex-col md:flex-row h-screen bg-[#0F172A] overflow-hidden">
-        {/* Sidebar Section */}
+      <ProfileGatekeeper>
+        <div className="flex flex-col md:flex-row h-screen bg-[#0F172A] overflow-hidden">
+          {/* Sidebar Section */}
         <Sidebar />
 
         {/* Main Content Area */}
@@ -22,6 +24,7 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      </ProfileGatekeeper>
     </AppDataProvider>
   );
 }

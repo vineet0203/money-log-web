@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   Bell
 } from 'lucide-react';
+import { SidebarUserProfile } from './SidebarUserProfile';
 
 const menuItems = [
   {
@@ -215,7 +216,7 @@ export function Sidebar() {
         )}
 
         {/* Navigation */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar space-y-1 ${isCollapsed ? 'pt-2 pb-6' : 'py-6'}`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar space-y-0.5 ${isCollapsed ? 'pt-2 pb-4' : 'py-4'}`}>
         {menuItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = isPathActive(item.href) || (item.items && item.items.some(subItem => isPathActive(subItem.href)));
@@ -224,7 +225,7 @@ export function Sidebar() {
           if (item.href) {
             // Single Link Item
             return (
-              <div key={index} className={`px-3 py-2 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-2' : ''}`}>
+              <div key={index} className={`px-3 py-1.5 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-1' : ''}`}>
                 <div className="relative">
                   {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
                   <Link 
@@ -246,7 +247,7 @@ export function Sidebar() {
 
           // Expandable Item
           return (
-            <div key={index} className={`px-3 py-2 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-2' : ''}`}>
+            <div key={index} className={`px-3 py-1.5 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-1' : ''}`}>
               <div className="relative">
                 {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
                 <button
@@ -272,7 +273,7 @@ export function Sidebar() {
 
               {/* Sub-menu */}
               {!isCollapsed && isOpen && item.items && (
-                <div className="mt-2 mb-1 space-y-2 pl-11 pr-3">
+                <div className="mt-1 space-y-1 pl-11 pr-3 pb-1">
                   {item.items.map((subItem, subIndex) => {
                     const isSubActive = isPathActive(subItem.href);
                     return (
@@ -296,20 +297,7 @@ export function Sidebar() {
         })}
       </div>
 
-      {/* User Profile Footer */}
-      <div className="p-4 border-t border-slate-800/50 flex-shrink-0">
-        <div className={`flex items-center gap-3 bg-slate-800/50 p-2 rounded-xl border border-slate-700/30 transition-all ${isCollapsed ? 'md:justify-center' : ''}`}>
-          <div className="w-10 h-10 rounded-full bg-[#159A1D] flex items-center justify-center text-white font-bold tracking-wide flex-shrink-0 shadow-md">
-            AR
-          </div>
-          {(!isCollapsed || isMobileOpen) && (
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-semibold text-slate-200 truncate">Arjun Reddy</p>
-              <p className="text-xs text-slate-500 truncate">Profile</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <SidebarUserProfile isCollapsed={isCollapsed} isMobileOpen={isMobileOpen} />
     </div>
     </>
   );

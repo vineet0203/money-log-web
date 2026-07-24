@@ -2,21 +2,42 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Star } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import 'react-phone-number-input/style.css';
-import PhoneInput from 'react-phone-number-input';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import { useRouter } from 'next/navigation';
+import { useSendOtp } from '@/hooks/queries/auth';
 
 export default function LoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
+
+  const sendOtpMutation = useSendOtp();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone) {
-      router.push('/verify-otp');
+    setError(null);
+
+    if (!phone) {
+      setError('Please enter a phone number');
+      return;
     }
+
+    if (!isValidPhoneNumber(phone)) {
+      setError('Please enter a valid phone number for the selected country');
+      return;
+    }
+
+    sendOtpMutation.mutate(phone, {
+      onSuccess: () => {
+        router.push(`/verify-otp?phone=${encodeURIComponent(phone)}`);
+      },
+      onError: (err: any) => {
+        setError(err.response?.data?.error || 'Failed to send OTP. Please try again.');
+      }
+    });
   };
 
   return (
@@ -82,14 +103,25 @@ export default function LoginPage() {
                 value={phone}
                 onChange={setPhone}
                 defaultCountry="US"
+                countries={['US', 'CA', 'IN']}
+                labels={{
+                  US: '🇺🇸 United States (+1)',
+                  CA: '🇨🇦 Canada (+1)',
+                  IN: '🇮🇳 India (+91)',
+                  ZZ: 'International'
+                }}
                 international
                 countryCallingCodeEditable={false}
               />
             </div>
 
+            {error && (
+              <p className="text-red-500 text-sm mt-1">{error}</p>
+            )}
+
             <div className="pt-4">
-              <Button type="submit" size="lg" className="w-full shadow-md">
-                Login
+              <Button type="submit" size="lg" className="w-full shadow-md" disabled={sendOtpMutation.isPending}>
+                {sendOtpMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Login'}
               </Button>
             </div>
           </form>
