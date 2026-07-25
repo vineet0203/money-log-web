@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useGetProfile } from '@/hooks/queries/user';
 import { useLogout } from '@/hooks/queries/auth';
-import { Loader2, LogOut, User, ChevronUp, ChevronDown } from 'lucide-react';
+import { Loader2, LogOut, User, ChevronUp, ChevronDown, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Modal } from '@/components/ui/Modal';
@@ -85,6 +85,14 @@ export function SidebarUserProfile({ isCollapsed, isMobileOpen }: SidebarUserPro
             >
               <User size={16} />
               Profile
+            </Link>
+            <Link 
+              href="/settings"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+            >
+              <Settings size={16} />
+              Settings
             </Link>
             <button 
               onClick={() => {

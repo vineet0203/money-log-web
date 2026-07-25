@@ -64,10 +64,10 @@ export function RemindersStatCard({
   const t = themes[theme];
 
   return (
-    <div className={`bg-white rounded-2xl p-5 border ${t.cardBorder} shadow-sm flex items-start gap-4 transition-all hover:shadow-md`}>
+    <div className={`bg-white rounded-2xl p-4 border ${t.cardBorder} shadow-sm flex items-start gap-3 transition-all hover:shadow-md`}>
       {/* Icon Area */}
-      <div className={`w-14 h-14 rounded-2xl ${t.iconBg} ${t.iconColor} flex items-center justify-center shrink-0`}>
-        <Icon size={24} strokeWidth={2} />
+      <div className={`w-12 h-12 rounded-2xl ${t.iconBg} ${t.iconColor} flex items-center justify-center shrink-0`}>
+        <Icon size={20} strokeWidth={2} />
       </div>
       
       {/* Content Area */}

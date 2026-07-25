@@ -54,7 +54,8 @@ export function Menu({ items, icon }: MenuProps) {
     };
   }, [isOpen]);
 
-  const toggleMenu = () => {
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const menuHeight = items.length * 40 + 16; // Approx height
@@ -73,7 +74,8 @@ export function Menu({ items, icon }: MenuProps) {
     setIsOpen(!isOpen);
   };
 
-  const handleItemClick = (onClick?: () => void) => {
+  const handleItemClick = (e: React.MouseEvent, onClick?: () => void) => {
+    e.stopPropagation();
     if (onClick) {
       onClick();
     }
@@ -102,7 +104,10 @@ export function Menu({ items, icon }: MenuProps) {
               key={idx}
               href={item.href}
               className={`${baseClasses} ${colorClasses}`}
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
             >
               {item.icon}
               {item.label}
@@ -113,7 +118,7 @@ export function Menu({ items, icon }: MenuProps) {
         return (
           <button
             key={idx}
-            onClick={() => handleItemClick(item.onClick)}
+            onClick={(e) => handleItemClick(e, item.onClick)}
             disabled={item.disabled}
             className={`${baseClasses} ${colorClasses}`}
           >

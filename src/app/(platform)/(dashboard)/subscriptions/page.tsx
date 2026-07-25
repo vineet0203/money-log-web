@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
 import { SubscriptionStatCard } from '@/components/subscriptionpage/SubscriptionStatCard';
 import { AddSubscriptionCard } from '@/components/subscriptionpage/AddSubscriptionCard';
@@ -10,6 +11,7 @@ import { useGetSubscriptionStats } from '@/hooks/queries/subscriptions';
 
 export default function SubscriptionsPage() {
   const { setHeaderData } = useAppData();
+  const router = useRouter();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   const { data: stats } = useGetSubscriptionStats();
@@ -25,9 +27,9 @@ export default function SubscriptionsPage() {
   return (
     <div className="mx-auto pb-12 space-y-6">
       {/* Top Stats & Actions Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <SubscriptionStatCard title="On Going Subscriptions" value={ongoingCount.toString().padStart(2, '0')} theme="green" />
-        <SubscriptionStatCard title="Upcoming Subscriptions" value={upcomingCount.toString().padStart(2, '0')} theme="blue" />
+        <SubscriptionStatCard title="Renew Within 7 days" value={upcomingCount.toString().padStart(2, '0')} theme="orange" />
         <SubscriptionStatCard title="Inactive Subscription" value={inactiveCount.toString().padStart(2, '0')} theme="red" />
         <AddSubscriptionCard onClick={() => setIsAddModalOpen(true)} />
       </div>

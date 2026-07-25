@@ -5,7 +5,8 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 interface AppDataContextType {
   title: string;
   description?: string;
-  setHeaderData: (title: string, description?: string) => void;
+  canBack?: boolean;
+  setHeaderData: (title: string, description?: string, canBack?: boolean) => void;
 }
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
@@ -13,14 +14,16 @@ const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState<string | undefined>(undefined);
+  const [canBack, setCanBack] = useState<boolean>(false);
 
-  const setHeaderData = useCallback((newTitle: string, newDescription?: string) => {
+  const setHeaderData = useCallback((newTitle: string, newDescription?: string, newCanBack: boolean = false) => {
     setTitle(newTitle);
     setDescription(newDescription);
+    setCanBack(newCanBack);
   }, []);
 
   return (
-    <AppDataContext.Provider value={{ title, description, setHeaderData }}>
+    <AppDataContext.Provider value={{ title, description, canBack, setHeaderData }}>
       {children}
     </AppDataContext.Provider>
   );

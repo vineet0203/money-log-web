@@ -1,10 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
-  withCredentials: true,
-});
+import api from '@/lib/axios';
 
 export interface SubscriptionData {
   id: number;
@@ -21,6 +16,10 @@ export interface SubscriptionData {
   category_color: string | null;
   days_left: number;
   computed_status: 'Ongoing' | 'Upcoming' | 'Inactive';
+  is_reminder_on: boolean | number;
+  reminder_days: number;
+  is_sms_enabled: boolean | number;
+  is_email_enabled: boolean | number;
 }
 
 export interface SubscriptionStats {
@@ -28,6 +27,12 @@ export interface SubscriptionStats {
   upcoming_count: string;
   inactive_count: string;
   total_count: string;
+  total_monthly_count: string;
+  total_yearly_count: string;
+  overdue_count: string;
+  within_7_days_count: string;
+  within_8_30_days_count: string;
+  yearly_30_45_days_count: string;
 }
 
 interface GetSubscriptionsResponse {
@@ -72,6 +77,32 @@ export const useAddSubscription = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    },
+  });
+};
+
+export const useGetSubscriptionDetails = (id: string) => {
+  return useQuery({
+    queryKey: ['subscriptions', id, 'details'],
+    queryFn: async () => {
+      const { data } = await api.get(`/subscriptions/${id}/details`);
+      return data;
+    },
+    enabled: !!id,
+  });
+};
+
+export const useUpdateSubscription = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updateData }: { id: string | number; [key: string]: any }) => {
+      const { data } = await api.put(`/subscriptions/${id}`, updateData);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptions', String(variables.id)] });
     },
   });
 };

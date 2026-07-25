@@ -1,10 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
-  withCredentials: true,
-});
+import api from '@/lib/axios';
 
 export interface Category {
   id: number;

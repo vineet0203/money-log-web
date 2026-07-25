@@ -1,11 +1,99 @@
 import React, { useState } from 'react';
-import { Bell, Minus, Plus, MessageSquareText, Mail, Save } from 'lucide-react';
+import { Bell, Minus, Plus, MessageSquareText, Mail, Save, Loader2 } from 'lucide-react';
+import { useGetProfile } from '@/hooks/queries/user';
+import { useUpdateSubscription } from '@/hooks/queries/subscriptions';
+import { useSnackbar } from 'notistack';
 
-export function RemindersSettings() {
-  const [remindersEnabled, setRemindersEnabled] = useState(true);
-  const [daysBefore, setDaysBefore] = useState(15);
-  const [smsEnabled, setSmsEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(true);
+interface RemindersSettingsProps {
+  subscriptionId?: string;
+  initialSettings?: {
+    is_reminder_on: boolean;
+    reminder_days: number;
+    is_sms_enabled: boolean;
+    is_email_enabled: boolean;
+  };
+  billingCycle?: string;
+}
+
+export function RemindersSettings({ subscriptionId, initialSettings, billingCycle = 'monthly' }: RemindersSettingsProps) {
+  const [remindersEnabled, setRemindersEnabled] = useState(initialSettings?.is_reminder_on ?? true);
+  const [daysBefore, setDaysBefore] = useState<number>(initialSettings?.reminder_days ?? 7);
+  const [smsEnabled, setSmsEnabled] = useState(initialSettings?.is_sms_enabled ?? true);
+  const [emailEnabled, setEmailEnabled] = useState(initialSettings?.is_email_enabled ?? true);
+
+  const { data: profile } = useGetProfile();
+  const { enqueueSnackbar } = useSnackbar();
+  const updateMutation = useUpdateSubscription();
+
+  const handleToggleReminders = (enabled: boolean) => {
+    if (enabled) {
+      const globalSms = profile?.global_sms_enabled ?? false;
+      const globalEmail = profile?.global_email_enabled ?? false;
+
+      if (!globalSms && !globalEmail) {
+        enqueueSnackbar('Please enable SMS or Email in global Notification Settings first.', { variant: 'error' });
+        return;
+      }
+      
+      setSmsEnabled(globalSms);
+      setEmailEnabled(globalEmail);
+    }
+    setRemindersEnabled(enabled);
+  };
+
+  const handleToggleSms = (enabled: boolean) => {
+    if (enabled) {
+      if (!profile?.global_sms_enabled) {
+        enqueueSnackbar('SMS is disabled globally. Enable it in Notification Settings first.', { variant: 'warning' });
+        return;
+      }
+    } else {
+      // Trying to disable SMS, ensure Email is still enabled
+      if (!emailEnabled) {
+        enqueueSnackbar('At least one notification method (SMS or Email) must be enabled.', { variant: 'warning' });
+        return;
+      }
+    }
+    setSmsEnabled(enabled);
+  };
+
+  const handleToggleEmail = (enabled: boolean) => {
+    if (enabled) {
+      if (!profile?.global_email_enabled) {
+        enqueueSnackbar('Email is disabled globally. Enable it in Notification Settings first.', { variant: 'warning' });
+        return;
+      }
+    } else {
+      // Trying to disable Email, ensure SMS is still enabled
+      if (!smsEnabled) {
+        enqueueSnackbar('At least one notification method (SMS or Email) must be enabled.', { variant: 'warning' });
+        return;
+      }
+    }
+    setEmailEnabled(enabled);
+  };
+
+  const handleSave = () => {
+    if (!subscriptionId) return;
+
+    updateMutation.mutate(
+      {
+        id: subscriptionId,
+        is_reminder_on: remindersEnabled,
+        reminder_days: daysBefore,
+        is_sms_enabled: smsEnabled,
+        is_email_enabled: emailEnabled,
+      },
+      {
+        onSuccess: () => {
+          enqueueSnackbar('Reminder settings saved successfully!', { variant: 'success' });
+        },
+        onError: () => {
+          enqueueSnackbar('Failed to save reminder settings.', { variant: 'error' });
+        }
+      }
+    );
+  };
 
   // Reusable toggle switch component
   const ToggleSwitch = ({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) => (
@@ -36,9 +124,13 @@ export function RemindersSettings() {
         </div>
         
         <div className="flex items-center gap-4">
-          <ToggleSwitch enabled={remindersEnabled} onChange={setRemindersEnabled} />
-          <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#159A1D] text-white text-sm font-bold shadow-sm hover:bg-[#118218] transition-all">
-            <Save size={16} />
+          <ToggleSwitch enabled={remindersEnabled} onChange={handleToggleReminders} />
+          <button 
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#159A1D] text-white text-sm font-bold shadow-sm hover:bg-[#118218] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {updateMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             Save
           </button>
         </div>
@@ -59,7 +151,10 @@ export function RemindersSettings() {
               </button>
               <span className="font-bold text-slate-900 w-5 text-center text-sm">{daysBefore}</span>
               <button 
-                onClick={() => setDaysBefore(daysBefore + 1)}
+                onClick={() => {
+                  const maxDays = billingCycle === 'yearly' ? 30 : 15;
+                  setDaysBefore(Math.min(maxDays, daysBefore + 1));
+                }}
                 className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <Plus size={16} strokeWidth={2.5} />
@@ -75,7 +170,7 @@ export function RemindersSettings() {
               <MessageSquareText size={18} className="text-slate-400" />
               <span className="font-bold text-slate-700 text-sm">SMS Notification</span>
             </div>
-            <ToggleSwitch enabled={smsEnabled} onChange={setSmsEnabled} />
+            <ToggleSwitch enabled={smsEnabled} onChange={handleToggleSms} />
           </div>
 
           {/* Email Notification */}
@@ -84,7 +179,7 @@ export function RemindersSettings() {
               <Mail size={18} className="text-slate-400" />
               <span className="font-bold text-slate-700 text-sm">Email Notification</span>
             </div>
-            <ToggleSwitch enabled={emailEnabled} onChange={setEmailEnabled} />
+            <ToggleSwitch enabled={emailEnabled} onChange={handleToggleEmail} />
           </div>
         </div>
       )}

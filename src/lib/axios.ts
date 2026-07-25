@@ -30,7 +30,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // If error is 401 Unauthorized and we haven't already retried this request
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh-token')) {
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });

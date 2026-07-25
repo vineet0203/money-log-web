@@ -4,21 +4,20 @@ import { DataTable, Column } from '@/components/ui/DataTable';
 import { useGetSubscriptions } from '@/hooks/queries/subscriptions';
 import { useGetCategories } from '@/hooks/queries/categories';
 import { SubscriptionActionMenu } from './SubscriptionActionMenu';
+import { SubscriptionLogo } from '@/components/ui/SubscriptionLogo';
+import { Select } from '@/components/ui/Select';
+import { useRouter } from 'next/navigation';
 
 export function SubscriptionDetailsTable() {
   const [activeTab, setActiveTab] = useState('All');
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState('all');
   const itemsPerPage = 8;
+  const router = useRouter();
 
-  // Reset page when tab or category changes
+  // Reset page when tab changes
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    setPage(1);
-  };
-  
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCategoryId(e.target.value);
     setPage(1);
   };
 
@@ -38,7 +37,8 @@ export function SubscriptionDetailsTable() {
       amount: `$${Number(sub.amount).toFixed(2)}`,
       billingCycle: sub.billing_cycle,
       status: sub.computed_status,
-      dbStatus: sub.status
+      dbStatus: sub.status,
+      nextBillingDate: sub.next_billing_date
     };
   });
 
@@ -48,9 +48,7 @@ export function SubscriptionDetailsTable() {
       header: 'Subscription',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#1CD491] text-white flex items-center justify-center font-bold text-sm shrink-0">
-            {row.name.charAt(0)}
-          </div>
+          <SubscriptionLogo name={row.name} />
           <span className="text-slate-900 font-semibold">{row.name}</span>
         </div>
       )
@@ -93,7 +91,7 @@ export function SubscriptionDetailsTable() {
         if (row.status === 'Inactive') {
           colorClasses = 'bg-red-50 text-red-600 border-red-200';
         } else if (row.status === 'Upcoming') {
-          colorClasses = 'bg-blue-50 text-blue-600 border-blue-200';
+          colorClasses = 'bg-orange-50 text-orange-600 border-orange-200';
         }
 
         return (
@@ -107,13 +105,18 @@ export function SubscriptionDetailsTable() {
       key: 'action',
       header: 'Action',
       render: (row) => (
-        <SubscriptionActionMenu subscriptionId={row.id} status={row.dbStatus} />
+        <SubscriptionActionMenu 
+          subscriptionId={row.id} 
+          status={row.dbStatus} 
+          nextBillingDate={row.nextBillingDate}
+          billingCycle={row.billingCycle}
+        />
       )
     }
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col">
       {/* Header */}
       <div className="p-6 pb-4 flex items-center justify-between">
         <h2 className="text-lg font-bold text-slate-900">Subscriptions</h2>
@@ -137,17 +140,19 @@ export function SubscriptionDetailsTable() {
           ))}
         </div>
         
-        <div className="py-2">
-          <select 
+        <div className="py-2 w-48">
+          <Select 
             value={categoryId}
-            onChange={handleCategoryChange}
-            className="px-4 py-1.5 text-sm font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-[#159A1D]"
-          >
-            <option value="all">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id.toString()}>{cat.name}</option>
-            ))}
-          </select>
+            onChange={(val) => {
+              setCategoryId(val);
+              setPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'All Categories' },
+              ...categories.map(cat => ({ value: cat.id.toString(), label: cat.name }))
+            ]}
+            className="!py-2 !px-3 !rounded-lg !bg-slate-50 border-slate-200"
+          />
         </div>
       </div>
 
@@ -157,6 +162,7 @@ export function SubscriptionDetailsTable() {
           columns={columns} 
           data={tableData} 
           isLoading={isLoading}
+          onRowClick={(row: any) => router.push(`/subscriptions/${row.id}`)}
           pagination={{ 
             currentPage: response?.pagination?.currentPage || 1, 
             totalPages: response?.pagination?.totalPages || 1, 

@@ -2,6 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import { SnackbarProvider, closeSnackbar } from 'notistack';
+import { X } from 'lucide-react';
 
 export default function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -19,7 +21,18 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <SnackbarProvider 
+        maxSnack={3} 
+        autoHideDuration={20000}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        action={(snackbarId) => (
+          <button onClick={() => closeSnackbar(snackbarId)} className="text-white hover:text-slate-200 transition-colors">
+            <X size={18} />
+          </button>
+        )}
+      >
+        {children}
+      </SnackbarProvider>
     </QueryClientProvider>
   );
 }

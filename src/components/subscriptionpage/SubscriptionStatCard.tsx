@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 interface SubscriptionStatCardProps {
   title: string;
   value: string;
-  theme?: 'green' | 'blue' | 'red';
+  theme?: 'green' | 'blue' | 'red' | 'orange';
 }
 
 export function SubscriptionStatCard({ title, value, theme = 'green' }: SubscriptionStatCardProps) {
@@ -17,13 +17,16 @@ export function SubscriptionStatCard({ title, value, theme = 'green' }: Subscrip
   } else if (theme === 'red') {
     bgClass = 'bg-red-500';
     textClass = 'text-red-500';
+  } else if (theme === 'orange') {
+    bgClass = 'bg-[#F59E0B]'; // amber-500 which is a nice yellowish-orange
+    textClass = 'text-[#F59E0B]';
   }
 
   return (
-    <div className="bg-white rounded-xl p-4 md:p-5 border border-slate-100 shadow-sm flex items-center gap-4">
-      <div className={`w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center flex-shrink-0 ${bgClass}`}>
+    <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm flex items-center gap-3">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bgClass}`}>
         <div className="relative flex items-center justify-center">
-          <RefreshCw className="text-white" size={28} />
+          <RefreshCw className="text-white" size={24} />
           <span className="absolute text-white font-bold text-sm">$</span>
         </div>
       </div>

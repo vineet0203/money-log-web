@@ -13,6 +13,7 @@ export interface DataTableProps<T> {
   data: T[];
   isLoading?: boolean;
   emptyMessage?: React.ReactNode;
+  onRowClick?: (row: T) => void;
   pagination?: {
     currentPage: number;
     totalPages: number;
@@ -28,6 +29,7 @@ export function DataTable<T>({
   data,
   isLoading = false,
   emptyMessage = 'No data available',
+  onRowClick,
   pagination,
 }: DataTableProps<T>) {
   // Loading State (Shimmer Effect)
@@ -125,7 +127,11 @@ export function DataTable<T>({
               </tr>
             ) : (
               data.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                <tr 
+                  key={rowIndex} 
+                  onClick={() => onRowClick && onRowClick(row)}
+                  className={`border-b border-slate-50 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50/80' : 'hover:bg-slate-50/50'}`}
+                >
                   {columns.map((col, colIndex) => (
                     <td key={colIndex} className={`px-6 py-4 whitespace-nowrap text-slate-600 ${col.className || ''}`}>
                       {col.render ? col.render(row) : (row as any)[col.key]}
