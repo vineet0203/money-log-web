@@ -93,12 +93,13 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side: Login Form */}
-        <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl">
+        <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl w-full max-w-xl mx-auto">
           <h3 className="text-2xl font-bold text-gray-900 mb-8">Sign-in</h3>
           
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="w-full border-b border-gray-200 focus-within:border-[#159A1D] transition-colors pb-1">
+            <div className="w-full max-w-4xl mx-auto flex justify-center border-b border-gray-200 focus-within:border-[#159A1D] transition-colors pb-1">
               <PhoneInput
+                className="w-full flex justify-center"
                 placeholder="Enter phone number"
                 value={phone}
                 onChange={setPhone}

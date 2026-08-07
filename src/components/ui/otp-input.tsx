@@ -1,15 +1,22 @@
 "use client";
 
-import React, { useRef, KeyboardEvent, ClipboardEvent } from 'react';
+import React, { useRef, KeyboardEvent, ClipboardEvent, useEffect } from 'react';
 
 interface OTPInputProps {
   length?: number;
   value: string;
   onChange: (value: string) => void;
+  autoFocus?: boolean;
 }
 
-export function OTPInput({ length = 6, value, onChange }: OTPInputProps) {
+export function OTPInput({ length = 6, value, onChange, autoFocus }: OTPInputProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (autoFocus && inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, [autoFocus]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const val = e.target.value;

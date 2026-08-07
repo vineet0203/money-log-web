@@ -36,30 +36,11 @@ const menuItems = [
     ]
   },
   {
-    title: "Overview",
-    icon: FileText,
-    items: [
-      { title: "Total Balance Tracking", href: "/overview/balance" },
-      { title: "Daily Expense Tracking", href: "/overview/expenses" },
-    ]
-  },
-  {
-    title: "Transaction Management",
-    icon: CircleDollarSign,
-    items: [
-      { title: "Income Transactions", href: "/transactions/income" },
-      { title: "Expense Transactions", href: "/transactions/expense" },
-      { title: "Transfer Money Tracking", href: "/transactions/transfer" },
-    ]
-  },
-  {
-    title: "Account",
+    title: "Accounts Management",
     icon: User,
     items: [
-      { title: "Account Summary", href: "/account/summary" },
-      { title: "Bank Accounts", href: "/account/banks" },
-      { title: "Credit Card Balances", href: "/account/credit-cards" },
-      { title: "Investment Accounts", href: "/account/investments" },
+      { title: "Overview", href: "/acc-manage/categories" },
+      { title: "Accounts", href: "/acc-manage/accounts" },
     ]
   },
   {
@@ -97,8 +78,8 @@ export function Sidebar() {
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
     "Subscription Management": true,
     "Overview": true,
-    "Transaction Management": true,
-    "Account": true,
+
+    "Accounts Management": true,
     "Payables & Receivables": true,
     "Budget & Reports": true,
     "Goals": true,

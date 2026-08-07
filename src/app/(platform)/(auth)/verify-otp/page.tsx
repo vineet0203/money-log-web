@@ -15,7 +15,7 @@ function VerifyOtpContent() {
   const phone = searchParams.get('phone');
 
   const [otp, setOtp] = useState('');
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(120);
   const [error, setError] = useState<string | null>(null);
 
   const verifyOtpMutation = useVerifyOtp();
@@ -39,7 +39,7 @@ function VerifyOtpContent() {
     if (timeLeft === 0 && phone) {
       setError(null);
       sendOtpMutation.mutate(phone, {
-        onSuccess: () => setTimeLeft(60),
+        onSuccess: () => setTimeLeft(120),
         onError: (err: any) => setError(err.response?.data?.error || 'Failed to resend code.')
       });
     }
@@ -117,13 +117,13 @@ function VerifyOtpContent() {
         </div>
 
         {/* Right Side: OTP Form */}
-        <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl">
+        <div className="bg-white rounded-[2rem] p-8 md:p-12 shadow-2xl w-full max-w-xl mx-auto">
           <h3 className="text-2xl font-bold text-gray-900 mb-2">Verify OTP</h3>
           <p className="text-sm text-gray-500 mb-8">We&apos;ve sent a 6-digit code to your phone number.</p>
           
           <form onSubmit={handleVerify} className="space-y-8">
             <div className="w-full flex justify-center pb-2">
-              <OTPInput value={otp} onChange={setOtp} length={6} />
+              <OTPInput value={otp} onChange={setOtp} autoFocus length={6} />
             </div>
 
             <div className="pt-2">
