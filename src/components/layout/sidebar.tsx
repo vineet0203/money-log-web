@@ -41,6 +41,7 @@ const menuItems = [
     items: [
       { title: "Overview", href: "/acc-manage/categories" },
       { title: "Accounts", href: "/acc-manage/accounts" },
+      { title: "Liabilities & Debt", href: "/acc-manage/liabilities" },
     ]
   },
   {
@@ -118,11 +119,11 @@ export function Sidebar() {
         </div>
         <div className="flex items-center gap-3">
           {/* Mobile Notification Button */}
-          <button className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50 text-slate-300 hover:text-white transition-colors relative">
+          <Link href="/notifications" className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50 text-slate-300 hover:text-white transition-colors relative block">
             <Bell size={20} />
             {/* Notification Dot */}
             <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#159A1D] rounded-full border-2 border-[#0F172A]" />
-          </button>
+          </Link>
           
           <button onClick={() => setIsMobileOpen(true)} className="p-2 text-slate-300 hover:text-white transition-colors bg-slate-800/50 rounded-lg border border-slate-700/50">
             <Menu size={24} />

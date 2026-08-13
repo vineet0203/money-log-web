@@ -134,8 +134,8 @@ export const useSyncBalance = () => {
 
 export const useCreateLinkToken = () => {
   return useMutation({
-    mutationFn: async (): Promise<{ link_token: string; expiration: string; request_id: string }> => {
-      const { data } = await api.post('/plaid/create-link-token');
+    mutationFn: async (type?: 'bank' | 'liabilities'): Promise<{ link_token: string; expiration: string; request_id: string }> => {
+      const { data } = await api.post('/plaid/create-link-token', { type });
       return data;
     }
   });

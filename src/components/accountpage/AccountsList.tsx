@@ -8,6 +8,7 @@ import { SyncAccountsButton } from './SyncAccountsButton';
 import { AccountActionMenu } from './AccountActionMenu';
 import { useGetAccounts } from '@/hooks/queries/accounts';
 import { useRouter } from 'next/navigation';
+import { Modal } from '@/components/ui/Modal';
 
 const BalanceCell = ({ balance }: { balance: number | undefined }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -30,6 +31,7 @@ const BalanceCell = ({ balance }: { balance: number | undefined }) => {
 
 export function AccountsList() {
   const [page, setPage] = useState(1);
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const limit = 10;
   const router = useRouter();
   
@@ -93,31 +95,51 @@ export function AccountsList() {
   ];
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] w-full overflow-hidden">
-      <div className="p-4 sm:p-6 pb-4 border-b border-gray-100 flex justify-between items-center">
-        <h2 className="text-xl font-extrabold text-slate-800">Your Accounts</h2>
-        <div className="flex gap-3">
-          <SyncAccountsButton />
-          <LinkAccountButton />
+    <>
+      <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] w-full overflow-hidden">
+        <div className="p-4 sm:p-6 pb-4 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-xl font-extrabold text-slate-800">Your Accounts</h2>
+          <div className="flex gap-3">
+            <SyncAccountsButton />
+            <button 
+              onClick={() => setIsLinkModalOpen(true)}
+              className="flex items-center gap-2 bg-[#159A1D] hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+            >
+              <Landmark size={18} />
+              <span>Link Account</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="w-full overflow-x-auto">
+          <DataTable 
+            data={accounts}
+            columns={columns}
+            isLoading={isLoading}
+            onRowClick={(row: any) => router.push(`/acc-manage/accounts/${row.id}`)}
+            pagination={pagination ? {
+              currentPage: pagination.currentPage,
+              totalPages: pagination.totalPages,
+              totalItems: pagination.totalItems,
+              itemsPerPage: pagination.itemsPerPage,
+              itemName: 'accounts',
+              onPageChange: (newPage) => setPage(newPage),
+            } : undefined}
+          />
         </div>
       </div>
 
-      <div className="w-full overflow-x-auto">
-        <DataTable 
-          data={accounts}
-          columns={columns}
-          isLoading={isLoading}
-          onRowClick={(row: any) => router.push(`/acc-manage/accounts/${row.id}`)}
-          pagination={pagination ? {
-            currentPage: pagination.currentPage,
-            totalPages: pagination.totalPages,
-            totalItems: pagination.totalItems,
-            itemsPerPage: pagination.itemsPerPage,
-            itemName: 'accounts',
-            onPageChange: (newPage) => setPage(newPage),
-          } : undefined}
-        />
-      </div>
-    </div>
+      <Modal 
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        title="Select Account Type"
+        description="What kind of account would you like to link?"
+      >
+        <div className="flex flex-col gap-4 py-4">
+           <LinkAccountButton type="bank" className="w-full py-4 text-base shadow-sm" onClick={() => setIsLinkModalOpen(false)} />
+           <LinkAccountButton type="liabilities" className="w-full py-4 text-base shadow-sm" onClick={() => setIsLinkModalOpen(false)} />
+        </div>
+      </Modal>
+    </>
   );
 }

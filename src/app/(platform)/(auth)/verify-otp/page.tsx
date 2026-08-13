@@ -51,6 +51,10 @@ function VerifyOtpContent() {
       setError(null);
       verifyOtpMutation.mutate({ phone, code: otp }, {
         onSuccess: (data: any) => {
+          if (typeof window !== 'undefined' && data.accessToken && data.refreshToken) {
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+          }
           if (data.isProfileComplete) {
             router.push('/dashboard');
           } else {

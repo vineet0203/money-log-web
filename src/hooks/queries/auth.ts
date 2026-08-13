@@ -32,6 +32,10 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: async () => {
       const response = await api.post('/auth/logout');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
       return response.data;
     },
   });

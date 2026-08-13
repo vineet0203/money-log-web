@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { usePlaidLink, PlaidLinkOptions, PlaidLinkOnSuccess } from 'react-plaid-link';
-import { Landmark } from 'lucide-react';
+import { Landmark, CreditCard } from 'lucide-react';
 import { useCreateLinkToken, useExchangePublicToken, useSyncAllTransactions } from '@/hooks/queries/accounts';
 import { useSnackbar } from 'notistack';
 
-export function LinkAccountButton() {
+export function LinkAccountButton({ type = 'bank', className = '', onClick }: { type?: 'bank' | 'liabilities', className?: string, onClick?: () => void }) {
   const [token, setToken] = useState<string | null>(null);
   const { enqueueSnackbar } = useSnackbar();
   
@@ -16,7 +16,7 @@ export function LinkAccountButton() {
 
   // Fetch link token on mount
   useEffect(() => {
-    createLinkToken.mutate(undefined, {
+    createLinkToken.mutate(type, {
       onSuccess: (data) => {
         setToken(data.link_token);
       },
@@ -25,7 +25,7 @@ export function LinkAccountButton() {
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [type]);
 
   const onSuccess = useCallback<PlaidLinkOnSuccess>((public_token, metadata) => {
     // Send the public_token to your app server.
@@ -54,14 +54,23 @@ export function LinkAccountButton() {
 
   const { open, ready } = usePlaidLink(config);
 
+  const isLiability = type === 'liabilities';
+
+  const handleClick = () => {
+    open();
+    if (onClick) onClick();
+  };
+
   return (
     <button 
-      onClick={() => open()} 
+      onClick={handleClick}
       disabled={!ready}
-      className="flex items-center gap-2 bg-[#159A1D] hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
+      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 text-white ${
+        isLiability ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#159A1D] hover:bg-green-700'
+      } ${className}`}
     >
-      <Landmark size={18} />
-      <span>Link Account</span>
+      {isLiability ? <CreditCard size={18} /> : <Landmark size={18} />}
+      <span>{isLiability ? 'Link Credit Card / Loan' : 'Link Bank Account'}</span>
     </button>
   );
 }
