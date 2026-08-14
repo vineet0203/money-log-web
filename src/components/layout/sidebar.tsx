@@ -41,7 +41,7 @@ const menuItems = [
     items: [
       { title: "Overview", href: "/acc-manage/categories" },
       { title: "Accounts", href: "/acc-manage/accounts" },
-      { title: "Liabilities & Debt", href: "/acc-manage/liabilities" },
+      { title: "Assets & Net Worth", href: "/acc-manage/assets" },
     ]
   },
   {

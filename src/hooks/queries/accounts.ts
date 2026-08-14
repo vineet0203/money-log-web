@@ -80,6 +80,20 @@ export const useDeleteAccount = () => {
   });
 };
 
+export const useBulkDeleteAccounts = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (ids: Extract<Account['id'], string | number>[]) => {
+      const { data } = await api.post(`/accounts/bulk-delete`, { ids });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+};
+
 export interface AccountTransactionsResponse {
   data: AccountTransaction[];
   pagination: {
@@ -134,7 +148,7 @@ export const useSyncBalance = () => {
 
 export const useCreateLinkToken = () => {
   return useMutation({
-    mutationFn: async (type?: 'bank' | 'liabilities'): Promise<{ link_token: string; expiration: string; request_id: string }> => {
+    mutationFn: async (type?: 'bank' | 'liabilities' | 'assets'): Promise<{ link_token: string; expiration: string; request_id: string }> => {
       const { data } = await api.post('/plaid/create-link-token', { type });
       return data;
     }
@@ -152,5 +166,53 @@ export const useExchangePublicToken = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
     }
+  });
+};
+
+export const useSyncAssets = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars?: { days_requested?: number }) => {
+      const { data } = await api.post('/plaid/sync-assets', vars || {});
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assetReports'] });
+    }
+  });
+};
+
+export const useGetAssetReports = () => {
+  return useQuery({
+    queryKey: ['assetReports'],
+    queryFn: async () => {
+      const { data } = await api.get('/plaid/asset-reports');
+      return data;
+    },
+  });
+};
+
+export const useGetAssetReportDetails = (assetReportId: string | null) => {
+  return useQuery({
+    queryKey: ['assetReportDetails', assetReportId],
+    queryFn: async () => {
+      if (!assetReportId) return null;
+      const { data } = await api.get(`/plaid/asset-reports/${assetReportId}`);
+      return data;
+    },
+    enabled: !!assetReportId,
+    retry: false, // If 202 (pending), react-query might see it as success if we return JSON, so we handle it gracefully or rely on refetchInterval if needed.
+  });
+};
+
+export const useGetLiabilityByAccountId = (accountId: string | undefined) => {
+  return useQuery({
+    queryKey: ['liability', accountId],
+    queryFn: async () => {
+      const { data } = await api.get(`/plaid/liabilities/${accountId}`);
+      return data?.data;
+    },
+    enabled: !!accountId,
+    retry: false,
   });
 };

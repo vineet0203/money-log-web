@@ -23,15 +23,7 @@ export interface Liability {
   logo: string;
 }
 
-export const useGetLiabilities = () => {
-  return useQuery({
-    queryKey: ['liabilities'],
-    queryFn: async (): Promise<{ data: Liability[] }> => {
-      const { data } = await api.get('/plaid/liabilities');
-      return data;
-    },
-  });
-};
+
 
 export const useSyncLiabilities = () => {
   const queryClient = useQueryClient();

@@ -2,13 +2,15 @@
 
 import React, { useState } from 'react';
 import { DataTable, Column } from '@/components/ui/DataTable';
-import { Landmark, CreditCard, Wallet, Eye, EyeOff } from 'lucide-react';
+import { Landmark, CreditCard, Wallet, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { LinkAccountButton } from './LinkAccountButton';
 import { SyncAccountsButton } from './SyncAccountsButton';
 import { AccountActionMenu } from './AccountActionMenu';
-import { useGetAccounts } from '@/hooks/queries/accounts';
+import { useGetAccounts, useBulkDeleteAccounts } from '@/hooks/queries/accounts';
+import { useSyncLiabilities } from '@/hooks/queries/liabilities';
 import { useRouter } from 'next/navigation';
-import { Modal } from '@/components/ui/Modal';
+import { useSnackbar } from 'notistack';
+import { Trash2 } from 'lucide-react';
 
 const BalanceCell = ({ balance }: { balance: number | undefined }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -31,11 +33,15 @@ const BalanceCell = ({ balance }: { balance: number | undefined }) => {
 
 export function AccountsList() {
   const [page, setPage] = useState(1);
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [selectedAccounts, setSelectedAccounts] = useState<number[]>([]);
+  const { enqueueSnackbar } = useSnackbar();
+
   const limit = 10;
   const router = useRouter();
   
   const { data: response, isLoading } = useGetAccounts(page, limit);
+  const bulkDeleteMutation = useBulkDeleteAccounts();
+  const syncLiabilitiesMutation = useSyncLiabilities();
   
   const accounts = response?.data || [];
   const pagination = response?.pagination;
@@ -94,20 +100,48 @@ export function AccountsList() {
     }
   ];
 
+  const handleBulkDelete = () => {
+    if (selectedAccounts.length === 0) return;
+    
+    if (confirm(`Are you sure you want to disconnect and delete ${selectedAccounts.length} selected account(s)?`)) {
+      bulkDeleteMutation.mutate(selectedAccounts, {
+        onSuccess: () => {
+          enqueueSnackbar(`Successfully disconnected ${selectedAccounts.length} account(s)`, { variant: 'success' });
+          setSelectedAccounts([]); // Clear selection
+        },
+        onError: () => {
+          enqueueSnackbar('Failed to disconnect accounts', { variant: 'error' });
+        }
+      });
+    }
+  };
+
   return (
     <>
       <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] w-full overflow-hidden">
         <div className="p-4 sm:p-6 pb-4 border-b border-gray-100 flex justify-between items-center">
           <h2 className="text-xl font-extrabold text-slate-800">Your Accounts</h2>
           <div className="flex gap-3">
-            <SyncAccountsButton />
-            <button 
-              onClick={() => setIsLinkModalOpen(true)}
-              className="flex items-center gap-2 bg-[#159A1D] hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+            {selectedAccounts.length > 0 && (
+              <button 
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+                className="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
+              >
+                <Trash2 size={18} />
+                <span>Disconnect Selected ({selectedAccounts.length})</span>
+              </button>
+            )}
+            <button
+              onClick={() => syncLiabilitiesMutation.mutate()}
+              disabled={syncLiabilitiesMutation.isPending}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50 shadow-sm"
             >
-              <Landmark size={18} />
-              <span>Link Account</span>
+              <RefreshCw size={16} className={syncLiabilitiesMutation.isPending ? "animate-spin" : ""} />
+              <span>Sync Liabilities</span>
             </button>
+            <SyncAccountsButton />
+            <LinkAccountButton type="bank" className="px-4 py-2 text-sm shadow-sm" />
           </div>
         </div>
 
@@ -116,6 +150,9 @@ export function AccountsList() {
             data={accounts}
             columns={columns}
             isLoading={isLoading}
+            enableSelection={true}
+            selectedRowIds={selectedAccounts}
+            onSelectionChange={(selectedIds) => setSelectedAccounts(selectedIds as number[])}
             onRowClick={(row: any) => router.push(`/acc-manage/accounts/${row.id}`)}
             pagination={pagination ? {
               currentPage: pagination.currentPage,
@@ -129,17 +166,6 @@ export function AccountsList() {
         </div>
       </div>
 
-      <Modal 
-        isOpen={isLinkModalOpen}
-        onClose={() => setIsLinkModalOpen(false)}
-        title="Select Account Type"
-        description="What kind of account would you like to link?"
-      >
-        <div className="flex flex-col gap-4 py-4">
-           <LinkAccountButton type="bank" className="w-full py-4 text-base shadow-sm" onClick={() => setIsLinkModalOpen(false)} />
-           <LinkAccountButton type="liabilities" className="w-full py-4 text-base shadow-sm" onClick={() => setIsLinkModalOpen(false)} />
-        </div>
-      </Modal>
     </>
   );
 }

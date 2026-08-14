@@ -6,7 +6,7 @@ import { Landmark, CreditCard } from 'lucide-react';
 import { useCreateLinkToken, useExchangePublicToken, useSyncAllTransactions } from '@/hooks/queries/accounts';
 import { useSnackbar } from 'notistack';
 
-export function LinkAccountButton({ type = 'bank', className = '', onClick }: { type?: 'bank' | 'liabilities', className?: string, onClick?: () => void }) {
+export function LinkAccountButton({ type = 'bank', className = '', onClick }: { type?: 'bank' | 'liabilities' | 'assets', className?: string, onClick?: () => void }) {
   const [token, setToken] = useState<string | null>(null);
   const { enqueueSnackbar } = useSnackbar();
   
@@ -55,6 +55,7 @@ export function LinkAccountButton({ type = 'bank', className = '', onClick }: { 
   const { open, ready } = usePlaidLink(config);
 
   const isLiability = type === 'liabilities';
+  const isAssets = type === 'assets';
 
   const handleClick = () => {
     open();
@@ -66,11 +67,11 @@ export function LinkAccountButton({ type = 'bank', className = '', onClick }: { 
       onClick={handleClick}
       disabled={!ready}
       className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 text-white ${
-        isLiability ? 'bg-amber-500 hover:bg-amber-600' : 'bg-[#159A1D] hover:bg-green-700'
+        isLiability ? 'bg-amber-500 hover:bg-amber-600' : isAssets ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-[#159A1D] hover:bg-green-700'
       } ${className}`}
     >
-      {isLiability ? <CreditCard size={18} /> : <Landmark size={18} />}
-      <span>{isLiability ? 'Link Credit Card / Loan' : 'Link Bank Account'}</span>
+      {isLiability ? <CreditCard size={18} /> : isAssets ? <Landmark size={18} /> : <Landmark size={18} />}
+      <span>{isLiability ? 'Link Credit Card / Loan' : isAssets ? 'Link Account for Assets' : 'Link Bank Account'}</span>
     </button>
   );
 }

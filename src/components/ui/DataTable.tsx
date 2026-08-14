@@ -22,6 +22,10 @@ export interface DataTableProps<T> {
     itemName?: string;
     onPageChange: (page: number) => void;
   };
+  enableSelection?: boolean;
+  selectedRowIds?: (string | number)[];
+  onSelectionChange?: (selectedIds: any[]) => void;
+  idKey?: string;
 }
 
 export function DataTable<T>({
@@ -31,7 +35,34 @@ export function DataTable<T>({
   emptyMessage = 'No data available',
   onRowClick,
   pagination,
+  enableSelection = false,
+  selectedRowIds = [],
+  onSelectionChange,
+  idKey = 'id',
 }: DataTableProps<T>) {
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const currentPageIds = data.map((row: any) => row[idKey]);
+    
+    if (e.target.checked) {
+      // Add all current page IDs to existing selection (avoiding duplicates)
+      const newSelection = Array.from(new Set([...selectedRowIds, ...currentPageIds]));
+      onSelectionChange?.(newSelection);
+    } else {
+      // Remove only the current page IDs from the existing selection
+      const newSelection = selectedRowIds.filter(id => !currentPageIds.includes(id));
+      onSelectionChange?.(newSelection);
+    }
+  };
+
+  const handleSelectRow = (e: React.ChangeEvent<HTMLInputElement>, id: any) => {
+    e.stopPropagation(); // Prevent row click
+    if (e.target.checked) {
+      onSelectionChange?.([...selectedRowIds, id]);
+    } else {
+      onSelectionChange?.(selectedRowIds.filter((selectedId) => selectedId !== id));
+    }
+  };
   // Loading State (Shimmer Effect)
   if (isLoading) {
     return (
@@ -39,17 +70,32 @@ export function DataTable<T>({
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-slate-100">
-                {columns.map((col, idx) => (
-                  <th key={idx} className={`px-6 py-4 font-bold text-slate-900 ${col.className || ''}`}>
-                    {col.header}
-                  </th>
-                ))}
-              </tr>
+            <tr className="border-b border-slate-100">
+              {enableSelection && (
+                <th className="px-6 py-4 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 text-[#159A1D] focus:ring-[#159A1D]"
+                    checked={data.length > 0 && data.every((row: any) => selectedRowIds.includes(row[idKey]))}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+              )}
+              {columns.map((col, idx) => (
+                <th key={idx} className={`px-6 py-4 font-bold text-slate-900 ${col.className || ''}`}>
+                  {col.header}
+                </th>
+              ))}
+            </tr>
             </thead>
             <tbody>
               {[...Array(10)].map((_, rowIndex) => (
                 <tr key={rowIndex} className="border-b border-slate-50">
+                  {enableSelection && (
+                    <td className="px-6 py-5">
+                      <div className="w-4 h-4 rounded bg-slate-200 animate-pulse"></div>
+                    </td>
+                  )}
                   {columns.map((col, colIndex) => {
                     let skeletonContent;
                     
@@ -105,6 +151,16 @@ export function DataTable<T>({
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="border-b border-slate-100">
+              {enableSelection && (
+                <th className="px-6 py-4 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-slate-300 text-[#159A1D] focus:ring-[#159A1D]"
+                    checked={data.length > 0 && data.every((row: any) => selectedRowIds.includes(row[idKey]))}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+              )}
               {columns.map((col, idx) => (
                 <th key={idx} className={`px-6 py-4 font-bold text-slate-900 whitespace-nowrap ${col.className || ''}`}>
                   {col.header}
@@ -115,7 +171,7 @@ export function DataTable<T>({
           <tbody>
             {data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={columns.length + (enableSelection ? 1 : 0)} className="px-6 py-12 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center">
                     {typeof emptyMessage === 'string' ? (
                       <p className="text-sm font-medium">{emptyMessage}</p>
@@ -126,19 +182,34 @@ export function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIndex) => (
-                <tr 
-                  key={rowIndex} 
-                  onClick={() => onRowClick && onRowClick(row)}
-                  className={`border-b border-slate-50 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50/80' : 'hover:bg-slate-50/50'}`}
-                >
-                  {columns.map((col, colIndex) => (
+              data.map((row, rowIndex) => {
+                const rowId = (row as any)[idKey];
+                const isSelected = selectedRowIds.includes(rowId);
+                
+                return (
+                  <tr 
+                    key={rowIndex} 
+                    onClick={() => onRowClick && onRowClick(row)}
+                    className={`border-b border-slate-50 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50/80' : 'hover:bg-slate-50/50'} ${isSelected ? 'bg-green-50/30' : ''}`}
+                  >
+                    {enableSelection && (
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-slate-300 text-[#159A1D] focus:ring-[#159A1D]"
+                          checked={isSelected}
+                          onChange={(e) => handleSelectRow(e, rowId)}
+                        />
+                      </td>
+                    )}
+                    {columns.map((col, colIndex) => (
                     <td key={colIndex} className={`px-6 py-4 whitespace-nowrap text-slate-600 ${col.className || ''}`}>
                       {col.render ? col.render(row) : (row as any)[col.key]}
                     </td>
                   ))}
-                </tr>
-              ))
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

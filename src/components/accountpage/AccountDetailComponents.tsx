@@ -182,3 +182,5 @@ export function TransactionRow({ txn, isLast }: { txn: AccountTransaction; isLas
     </div>
   );
 }
+
+

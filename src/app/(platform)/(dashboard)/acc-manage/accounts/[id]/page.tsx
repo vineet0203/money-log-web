@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAppData } from '@/providers/AppDataProvider';
 import { useGetAccount, useGetAccountTransactions } from '@/hooks/queries/accounts';
 import { AccountHeroBanner, AccountInfoCard, TransactionRow } from '@/components/accountpage/AccountDetailComponents';
+import { LiabilityInfoCard } from '@/components/accountpage/LiabilityInfoCard';
 import { Receipt, ArrowRight } from 'lucide-react';
 
 export default function AccountDetailPage() {
@@ -51,6 +52,9 @@ export default function AccountDetailPage() {
 
       {/* Account Info */}
       <AccountInfoCard account={account} />
+
+      {/* Liability Info (Will only render if account has liabilities) */}
+      <LiabilityInfoCard accountId={id} currencyCode={account.currency} />
 
       {/* Recent Transactions (preview) */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
