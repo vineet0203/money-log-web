@@ -314,7 +314,7 @@ export default function AssetReportDetailsPage() {
                   />
                   <RechartsTooltip 
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: number) => [`$${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`, 'Total Assets']}
+                    formatter={(value: any) => [`$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2})}`, 'Total Assets']}
                   />
                   <Area 
                     type="monotone" 
@@ -351,7 +351,7 @@ export default function AssetReportDetailsPage() {
                   />
                   <RechartsTooltip 
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value: number) => [`$${Math.abs(value).toLocaleString(undefined, {minimumFractionDigits: 2})}`, value < 0 ? 'Debt' : 'Assets']}
+                    formatter={(value: any) => [`$${Math.abs(Number(value)).toLocaleString(undefined, {minimumFractionDigits: 2})}`, Number(value) < 0 ? 'Debt' : 'Assets']}
                   />
                   <Legend verticalAlign="top" height={36} iconType="circle" />
                   <ReferenceLine y={0} stroke="#cbd5e1" />
@@ -436,7 +436,7 @@ export default function AssetReportDetailsPage() {
                     ))}
                   </Pie>
                   <RechartsTooltip 
-                    formatter={(value: number) => `$${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`}
+                    formatter={(value: any) => `$${Number(value).toLocaleString(undefined, {minimumFractionDigits: 2})}`}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   />
                   <Legend verticalAlign="bottom" height={36} iconType="circle" />
