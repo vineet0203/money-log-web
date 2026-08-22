@@ -104,10 +104,9 @@ export default function LoginPage() {
                 value={phone}
                 onChange={setPhone}
                 defaultCountry="US"
-                countries={['US', 'CA', 'IN']}
+                countries={['US', 'IN']}
                 labels={{
                   US: '🇺🇸 United States (+1)',
-                  CA: '🇨🇦 Canada (+1)',
                   IN: '🇮🇳 India (+91)',
                   ZZ: 'International'
                 }}
