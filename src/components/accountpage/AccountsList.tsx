@@ -11,6 +11,7 @@ import { useSyncLiabilities } from '@/hooks/queries/liabilities';
 import { useRouter } from 'next/navigation';
 import { useSnackbar } from 'notistack';
 import { Trash2 } from 'lucide-react';
+import { ReconnectAccountButton } from './ReconnectAccountButton';
 
 const BalanceCell = ({ balance }: { balance: number | undefined }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -84,7 +85,11 @@ export function AccountsList() {
       key: 'provider',
       header: 'Status',
       render: (row) => row.provider === 'plaid' ? (
-        <span className="text-[10px] font-bold px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-200 uppercase tracking-wider">Linked</span>
+        row.sync_status === 'login_required' && row.item_id ? (
+          <ReconnectAccountButton itemId={row.item_id} />
+        ) : (
+          <span className="text-[10px] font-bold px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-200 uppercase tracking-wider">Linked</span>
+        )
       ) : (
         <span className="text-[10px] font-bold px-3 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-200 uppercase tracking-wider">Manual</span>
       )

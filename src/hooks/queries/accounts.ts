@@ -148,9 +148,22 @@ export const useSyncBalance = () => {
 
 export const useCreateLinkToken = () => {
   return useMutation({
-    mutationFn: async (type?: 'bank' | 'liabilities' | 'assets'): Promise<{ link_token: string; expiration: string; request_id: string }> => {
-      const { data } = await api.post('/plaid/create-link-token', { type });
+    mutationFn: async (vars?: { type?: 'bank' | 'liabilities' | 'assets', item_id?: string }): Promise<{ link_token: string; expiration: string; request_id: string }> => {
+      const { data } = await api.post('/plaid/create-link-token', vars || {});
       return data;
+    }
+  });
+};
+
+export const useResetItemStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (item_id: string) => {
+      const { data } = await api.post('/plaid/reset-item-status', { item_id });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plaidItems'] });
     }
   });
 };
