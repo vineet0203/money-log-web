@@ -54,13 +54,29 @@ export default function Navbar() {
 
   const hidePill = () => setPill((current) => ({ ...current, opacity: 0 }));
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const headerElement = document.getElementById("main-header");
+      if (menuOpen && headerElement && !headerElement.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
+
   const go = (target: string) => {
     setMenuOpen(false);
     scrollToSection(target);
   };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 pt-3 lg:pt-5">
+    <header className="fixed inset-x-0 top-0 z-50 pt-3 lg:pt-5" id="main-header">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
         <div
           className={`relative flex items-center justify-between gap-4 rounded-2xl border px-4 py-2.5 backdrop-blur-xl transition-all duration-500 ease-out sm:px-5 ${
@@ -70,7 +86,7 @@ export default function Navbar() {
           }`}
         >
           {/* Logo */}
-          <Link href="/" className="group flex shrink-0 items-center gap-2">
+          <Link href="/" onClick={() => setMenuOpen(false)} className="group flex shrink-0 items-center gap-2">
             <span className="relative flex h-8 w-8 items-center justify-center">
               <span className="absolute inset-0 rounded-lg bg-brand-green/20 opacity-0 blur-md transition-opacity duration-500 group-hover:opacity-100" />
               <Image
