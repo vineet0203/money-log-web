@@ -12,7 +12,7 @@ const CONTACT = {
     { label: "support@moneylog.com", href: "mailto:support@moneylog.com" },
     { label: "info@moneylog.com", href: "mailto:info@moneylog.com" },
   ],
-  phone: { label: "+1 (800) 570-1492", href: "tel:+18005701492" },
+  phone: { label: "800 570 1492", href: "tel:+18005701492" },
 };
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -20,9 +20,9 @@ const CONTACT = {
  * These render at the top of the footer's Legal column.
  * ──────────────────────────────────────────────────────────────────────────── */
 const LEGAL_DOCS = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Use", href: "#" },
-  { label: "Cookie Policy", href: "#" },
+  { label: "Privacy Policy", href: "/privacy-policy" },
+  { label: "Terms and Conditions", href: "/terms-and-conditions" },
+  { label: "Cookies Policy", href: "/cookies-policy" },
 ];
 
 /* Navigation routes are intentionally left as "#" for now. */
