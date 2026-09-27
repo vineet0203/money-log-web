@@ -65,7 +65,7 @@ export function LinkAccountButton({ type = 'bank', className = '', onClick }: { 
 
     // Otherwise, fetch it now and show loading
     setIsInitializing(true);
-    createLinkToken.mutate(type, {
+    createLinkToken.mutate({ type }, {
       onSuccess: (data) => {
         setToken(data.link_token);
       },
