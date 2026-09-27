@@ -1,125 +1,147 @@
-import { CreditCard, RefreshCcw, FileSignature, HandCoins, WalletCards, FileBarChart, Wallet, Target, Apple } from "lucide-react";
-import Image from "next/image";
+import {
+  LayoutDashboard,
+  Receipt,
+  FileText,
+  CreditCard,
+  Target,
+  Bell,
+  RefreshCcw,
+  PiggyBank,
+  LineChart,
+  FolderOpen,
+  FileBarChart,
+  Bot,
+  LayoutGrid,
+} from "lucide-react";
+import Reveal from "@/components/ui/Reveal";
 
 export default function Features() {
   const features = [
     {
-      icon: <CreditCard className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Transactions",
-      description: "Track income &\nexpenses easily",
+      icon: <LayoutDashboard className="w-5 h-5 text-white" />,
+      color: "bg-green-500",
+      glow: "group-hover:shadow-green-500/40",
+      title: "Personal Finance Dashboard",
+      description: "Get a complete view of your financial life.",
     },
     {
-      icon: <RefreshCcw className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Subscriptions",
-      description: "Manage & never\nmiss a renewal",
+      icon: <Receipt className="w-5 h-5 text-white" />,
+      color: "bg-blue-600",
+      glow: "group-hover:shadow-blue-600/40",
+      title: "Income & Expense Tracking",
+      description: "Track all your income and expenses easily.",
     },
     {
-      icon: <FileSignature className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Payables",
-      description: "Track what you\nowe to you",
+      icon: <FileText className="w-5 h-5 text-white" />,
+      color: "bg-green-500",
+      glow: "group-hover:shadow-green-500/40",
+      title: "Billing & Invoice Management",
+      description: "Create, manage and track invoices.",
     },
     {
-      icon: <HandCoins className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Receivables",
-      description: "Track what others\nowe to you",
+      icon: <CreditCard className="w-5 h-5 text-white" />,
+      color: "bg-blue-500",
+      glow: "group-hover:shadow-blue-500/40",
+      title: "Bank & Card Transactions",
+      description: "Sync and categorize transactions automatically.",
     },
     {
-      icon: <WalletCards className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "P&L/Balance",
-      description: "Daily profit & loss\nand balance",
+      icon: <Target className="w-5 h-5 text-white" />,
+      color: "bg-blue-400",
+      glow: "group-hover:shadow-blue-400/40",
+      title: "Smart Budgeting",
+      description: "Set budgets and stay on track.",
     },
     {
-      icon: <FileBarChart className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Reports",
-      description: "Beautiful reports\n& insights",
+      icon: <Bell className="w-5 h-5 text-white" />,
+      color: "bg-indigo-500",
+      glow: "group-hover:shadow-indigo-500/40",
+      title: "Bill Pay & Reminders",
+      description: "Never miss a payment again.",
     },
     {
-      icon: <Wallet className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Budgets",
-      description: "Set budgets &\nstay on track",
+      icon: <RefreshCcw className="w-5 h-5 text-white" />,
+      color: "bg-blue-500",
+      glow: "group-hover:shadow-blue-500/40",
+      title: "Subscription Management",
+      description: "Track and manage all subscriptions.",
     },
     {
-      icon: <Target className="w-8 h-8 text-brand-green stroke-2" />,
-      title: "Goals",
-      description: "Plan your goals &\nachieve more",
+      icon: <PiggyBank className="w-5 h-5 text-white" />,
+      color: "bg-orange-500",
+      glow: "group-hover:shadow-orange-500/40",
+      title: "Savings Goals",
+      description: "Set goals and watch your savings grow.",
+    },
+    {
+      icon: <LineChart className="w-5 h-5 text-white" />,
+      color: "bg-green-500",
+      glow: "group-hover:shadow-green-500/40",
+      title: "Debt & Credit Tracking",
+      description: "Monitor credit scores and track debt payoff.",
+    },
+    {
+      icon: <FolderOpen className="w-5 h-5 text-white" />,
+      color: "bg-blue-600",
+      glow: "group-hover:shadow-blue-600/40",
+      title: "Tax & Receipt Organizer",
+      description: "Store receipts and organize tax documents.",
+    },
+    {
+      icon: <FileBarChart className="w-5 h-5 text-white" />,
+      color: "bg-blue-500",
+      glow: "group-hover:shadow-blue-500/40",
+      title: "Financial Reports",
+      description: "Get detailed insights and custom reports.",
+    },
+    {
+      icon: <Bot className="w-5 h-5 text-white" />,
+      color: "bg-green-500",
+      glow: "group-hover:shadow-green-500/40",
+      title: "AI Financial Assistant",
+      description: "Ask questions and get personalized insights.",
     },
   ];
 
   return (
-    <section id="features" className="py-16 px-8 w-full max-w-7xl mx-auto flex flex-col gap-16">
-      {/* 1. Features Grid */}
-      <div className="bg-blue-50/60 border border-blue-50/80 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-[1px]">
-          {features.map((feature, index) => (
-            <div 
-              key={index} 
-              className="flex flex-col items-center text-center p-10 bg-white hover:bg-gray-50/50 transition-colors"
-            >
-              <div className="mb-5">
-                {feature.icon}
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2.5 text-[15px]">{feature.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed whitespace-pre-line">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. Mobile Promo */}
-      <div className="w-full flex flex-col md:flex-row items-center gap-16 overflow-hidden">
-        {/* Left Content */}
-        <div className="w-full md:w-5/12 lg:w-2/5 flex flex-col items-start space-y-6 z-10">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight text-gray-900 tracking-tight">
-            Mobile First.<br />
-            Finance Anywhere.
-          </h2>
-          <p className="text-gray-600 font-medium text-lg pb-4">
-            Powerful Features on the go.
-          </p>
-          <div className="flex flex-col gap-4 w-full sm:w-auto p-1">
-            {/* App Store Badge (CSS recreation) */}
-            <a href="#" className="flex items-center justify-start px-8 py-3.5 bg-black text-white rounded-xl transition-transform hover:scale-105 origin-left border border-black w-[240px]">
-              <Apple className="w-9 h-9 mr-4 fill-white shrink-0" />
-              <div className="flex flex-col items-start">
-                <span className="text-[9px] uppercase font-semibold leading-none mb-1 text-gray-200">Available on the</span>
-                <span className="text-[19px] font-semibold leading-none">App Store</span>
-              </div>
-            </a>
-            {/* Google Play Badge (CSS recreation) */}
-            <a href="#" className="flex items-center justify-start px-8 py-3.5 bg-black text-white rounded-xl transition-transform hover:scale-105 origin-left border border-black w-[240px]">
-              <svg viewBox="0 0 512 512" className="w-8 h-8 mr-4 shrink-0 translate-x-0.5" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#4caf50" d="M36.1 27.6l284.1 164-58.8 58.8-225.3-222.8z"/>
-                <path fill="#2196f3" d="M36.1 27.6v456.8l225.3-222.8z"/>
-                <path fill="#ffc107" d="M466 276.1l-145.8 84.1-58.8-58.8 58.8-58.8 145.8 84.1c11.9 6.8 11.9 22.6 0 29.4z"/>
-                <path fill="#f44336" d="M36.1 484.4l284.1-164-58.8-58.8-225.3 222.8z"/>
-              </svg>
-              <div className="flex flex-col items-start">
-                <span className="text-[9px] uppercase font-semibold leading-none mb-1 text-gray-200">GET IT ON</span>
-                <span className="text-[18px] font-semibold leading-none">Google Play</span>
-              </div>
-            </a>
+    <section
+      id="features"
+      className="w-full scroll-mt-24 pt-12 pb-16 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-24"
+    >
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col items-center px-5 sm:px-6 lg:px-8">
+        <Reveal>
+          <div className="group mb-8 flex items-center justify-center gap-3 sm:mb-10 lg:mb-12">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 shadow-sm transition-transform duration-500 ease-out group-hover:scale-110 group-hover:-rotate-6 sm:h-10 sm:w-10">
+              <LayoutGrid className="h-4 w-4 text-white sm:h-5 sm:w-5" strokeWidth={2.5} />
+            </span>
+            <h2 className="text-center text-xl font-bold tracking-tight text-balance text-blue-950 sm:text-2xl lg:text-[1.75rem]">
+              Everything You Need to Manage Your Money
+            </h2>
           </div>
-        </div>
+        </Reveal>
 
-        {/* Right Image (Perfectly cropped to show both phones) */}
-        <div className="w-full md:w-7/12 lg:w-3/5 overflow-hidden rounded-2xl drop-shadow-sm flex justify-end items-center">
-          {/* 
-            By using justify-end and a width larger than 100% (e.g. 180%), 
-            the right edge of the image is pinned to the right of the container, 
-            and the left side of the image (the text) gracefully overflows out of view to the left.
-            This ensures both phones are visible without clipping the top or bottom!
-          */}
-          <Image
-            src="/mobile_image.png"
-            alt="Mobile App Promos"
-            width={1536}
-            height={1024}
-            className="w-[220%] lg:w-[210%] h-auto max-w-none transform origin-right hover:scale-[1.02] transition-transform duration-500"
-            sizes="(max-width: 768px) 220vw, 125vw"
-            priority
-          />
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
+          {features.map((feature, index) => (
+            <Reveal key={feature.title} delay={Math.min(index, 7) * 60} variant="up" className="h-full">
+              <div className="ml-card ml-sheen group flex h-full cursor-default flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:border-brand-green/30 sm:p-6">
+                <div
+                  className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${feature.color} shadow-sm transition-all duration-500 ease-out group-hover:scale-110 group-hover:-rotate-6 group-hover:shadow-lg ${feature.glow}`}
+                >
+                  <span className="transition-transform duration-500 ease-out group-hover:rotate-6">
+                    {feature.icon}
+                  </span>
+                </div>
+                <h3 className="mb-2 text-[15px] font-bold text-gray-900 transition-colors duration-300 group-hover:text-brand-green">
+                  {feature.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-gray-500 transition-colors duration-300 group-hover:text-gray-600">
+                  {feature.description}
+                </p>
+                {/* Bottom accent line that draws in on hover */}
+                <span className="mt-4 block h-[2px] w-0 rounded-full bg-gradient-to-r from-brand-green to-blue-500 transition-all duration-500 ease-out group-hover:w-12" />
+              </div>
+            </Reveal>
+          ))}
         </div>
       </div>
     </section>

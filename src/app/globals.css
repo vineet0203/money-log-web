@@ -10,7 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
+
   --color-brand-green: #1a8f4c;
   --color-brand-green-dark: #126937;
   --color-brand-dark: #18191c;
@@ -62,3 +62,288 @@ body {
   max-height: 70vh;
 }
 
+/* ==========================================================================
+   Landing page motion system
+   Shared keyframes + micro-interaction utilities used by the marketing page.
+   Everything below is additive and scoped to opt-in class names.
+   ========================================================================== */
+
+@keyframes ml-fade-up {
+  from { opacity: 0; transform: translate3d(0, 24px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes ml-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -14px, 0); }
+}
+
+@keyframes ml-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(40px, -30px, 0) scale(1.08); }
+  66%      { transform: translate3d(-24px, 22px, 0) scale(0.95); }
+}
+
+@keyframes ml-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33%      { transform: translate3d(-36px, 26px, 0) scale(0.94); }
+  66%      { transform: translate3d(28px, -20px, 0) scale(1.09); }
+}
+
+@keyframes ml-gradient-pan {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes ml-pop-in {
+  0%   { opacity: 0; transform: scale(0.4); }
+  70%  { opacity: 1; transform: scale(1.14); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ml-nudge {
+  0%, 100% { transform: translateX(0); opacity: 0.55; }
+  50%      { transform: translateX(5px); opacity: 1; }
+}
+
+@keyframes ml-ring {
+  0%   { transform: scale(0.9); opacity: 0.55; }
+  70%  { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes ml-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26, 143, 76, 0.28), 0 18px 40px -22px rgba(16, 24, 40, 0.35); }
+  50%      { box-shadow: 0 0 0 10px rgba(26, 143, 76, 0), 0 22px 50px -22px rgba(16, 24, 40, 0.45); }
+}
+
+@keyframes ml-caret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+/* --- Scroll reveal ------------------------------------------------------- */
+
+.reveal {
+  opacity: 0;
+  transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-up     { transform: translate3d(0, 26px, 0); }
+.reveal-scale  { transform: scale(0.96); }
+.reveal-left   { transform: translate3d(-26px, 0, 0); }
+.reveal-right  { transform: translate3d(26px, 0, 0); }
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* --- Entrance (CSS-only, works without JS) ------------------------------- */
+
+.ml-rise {
+  animation: ml-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* --- Ambient motion ------------------------------------------------------ */
+
+.ml-float        { animation: ml-float 6s ease-in-out infinite; }
+.ml-float-slow   { animation: ml-float 9s ease-in-out infinite; }
+
+.ml-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+.ml-blob-a { animation: ml-drift-a 22s ease-in-out infinite; }
+.ml-blob-b { animation: ml-drift-b 26s ease-in-out infinite; }
+
+.ml-gradient-text {
+  background-image: linear-gradient(100deg, #3b82f6, #60a5fa, #2563eb, #3b82f6);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: ml-gradient-pan 7s linear infinite;
+}
+
+.ml-cta-gradient {
+  background-image: linear-gradient(110deg, #2563eb, #3b82f6, #1d4ed8, #2563eb);
+  background-size: 200% auto;
+  animation: ml-gradient-pan 12s linear infinite;
+}
+
+/* --- Buttons & links ----------------------------------------------------- */
+
+.ml-shine { position: relative; overflow: hidden; }
+
+.ml-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-130%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transition: transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.ml-shine:hover::after { transform: translateX(130%) skewX(-18deg); }
+
+.ml-press { transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+.ml-press:active { transform: scale(0.965); }
+
+.ml-nav-link { position: relative; }
+
+.ml-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-brand-green, #1a8f4c);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ml-nav-link:hover::after,
+.ml-nav-link:focus-visible::after { transform: scaleX(1); }
+
+.ml-link-slide {
+  display: inline-block;
+  transition: color 0.2s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ml-link-slide:hover { transform: translateX(4px); }
+
+/* --- Cards --------------------------------------------------------------- */
+
+.ml-card {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease;
+}
+
+.ml-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(26, 143, 76, 0.1), transparent 70%);
+  transition: opacity 0.35s ease;
+}
+
+.ml-card:hover::before { opacity: 1; }
+
+.ml-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 44px -24px rgba(16, 24, 40, 0.45);
+}
+
+.ml-sheen { position: relative; overflow: hidden; }
+
+.ml-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 55%;
+  transform: translateX(-160%) skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.ml-sheen:hover::after { transform: translateX(260%) skewX(-20deg); }
+
+.ml-tilt-wrap { perspective: 1400px; }
+
+.ml-tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.ml-popular {
+  animation: ml-glow 3.6s ease-in-out infinite;
+}
+
+/* --- Staged children (run once the parent reveal becomes visible) --------- */
+
+.reveal.is-visible .ml-pop {
+  animation: ml-pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.reveal.is-visible .ml-nudge {
+  animation: ml-nudge 1.8s ease-in-out infinite;
+}
+
+.ml-ring { position: relative; }
+
+.ml-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ml-ring:hover::after { animation: ml-ring 1s ease-out infinite; }
+
+.ml-caret { animation: ml-caret 1.4s ease-in-out infinite; }
+
+/* --- Accessibility ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-up,
+  .reveal-scale,
+  .reveal-left,
+  .reveal-right {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .ml-rise,
+  .ml-float,
+  .ml-float-slow,
+  .ml-blob-a,
+  .ml-blob-b,
+  .ml-gradient-text,
+  .ml-cta-gradient,
+  .ml-popular,
+  .ml-caret,
+  .reveal.is-visible .ml-pop,
+  .reveal.is-visible .ml-nudge {
+    animation: none !important;
+  }
+
+  .ml-rise {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .ml-card:hover,
+  .ml-link-slide:hover { transform: none; }
+
+  .ml-shine::after,
+  .ml-sheen::after { display: none; }
+
+  .ml-tilt { transition: none; }
+}

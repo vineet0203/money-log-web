@@ -3,7 +3,7 @@ import Image from "next/image";
 export default function BudgetTracking() {
   return (
     <section className="py-24 bg-gradient-to-r from-[#def2f7] to-[#e4f6f8] overflow-hidden">
-      <div className="max-w-7xl mx-auto px-8 flex flex-col lg:flex-row items-center gap-16">
+      <div className="max-w-[1400px] mx-auto px-8 flex flex-col lg:flex-row items-center gap-16">
         
         {/* Left Side: Mockup Image */}
         <div className="flex-1 relative w-full flex justify-center">

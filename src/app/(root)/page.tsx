@@ -1,16 +1,22 @@
 import Hero from "@/components/Hero";
-import TrustBanner from "@/components/TrustBanner";
 import Features from "@/components/Features";
-import BudgetTracking from "@/components/BudgetTracking";
+import HowItWorks from "@/components/HowItWorks";
+import FinancialPrivacy from "@/components/FinancialPrivacy";
+import FinancialServices from "@/components/FinancialServices";
+import Pricing from "@/components/Pricing";
+import Testimonials from "@/components/Testimonials";
 import CtaBanner from "@/components/CtaBanner";
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col w-full">
       <Hero />
-      <TrustBanner />
       <Features />
-      <BudgetTracking />
+      <HowItWorks />
+      <FinancialPrivacy />
+      <FinancialServices />
+      <Pricing />
+      <Testimonials />
       <CtaBanner />
     </div>
   );
