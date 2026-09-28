@@ -32,7 +32,9 @@ export function middleware(request: NextRequest) {
     '/complete-profile'
   ];
   
-  const isProtectedRoute = protectedPrefixes.some(prefix => pathname.startsWith(prefix));
+  const isProtectedRoute = protectedPrefixes.some(prefix => 
+    pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
 
   // Logic 1: Unauthenticated users trying to access protected routes -> redirect to login
   if (isProtectedRoute && !hasToken) {

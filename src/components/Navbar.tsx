@@ -3,20 +3,22 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { scrollToSection } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { label: "Personal Finance", target: "features" },
-  { label: "Bills & Payments", target: "features" },
-  { label: "Transactions", target: "features" },
-  { label: "Budgeting", target: "features" },
-  { label: "Reports", target: "features" },
-  { label: "Resources", target: "features" },
-  { label: "Pricing", target: "pricing" },
+  { label: "Personal Finance", href: "/personal-finance" },
+  { label: "Bills & Payments", href: "/bills-and-payments" },
+  { label: "Transactions", href: "/transaction-tracking" },
+  { label: "Budgeting", href: "/budgeting" },
+  { label: "Reports", href: "/financial-reports" },
+  { label: "Resources", href: "/resources" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,7 +74,11 @@ export default function Navbar() {
 
   const go = (target: string) => {
     setMenuOpen(false);
-    scrollToSection(target);
+    if (pathname !== "/") {
+      window.location.href = `/#${target}`;
+    } else {
+      scrollToSection(target);
+    }
   };
 
   return (
@@ -113,21 +119,42 @@ export default function Navbar() {
             className="relative hidden items-center xl:flex"
           >
             <span
-              className="pointer-events-none absolute top-1/2 -z-0 h-9 -translate-y-1/2 rounded-full bg-gray-900/[0.06] transition-all duration-300 ease-out"
+              className="pointer-events-none absolute top-1/2 -z-0 h-9 -translate-y-1/2 rounded-full bg-brand-green/10 transition-all duration-300 ease-out"
               style={{ left: pill.left, width: pill.width, opacity: pill.opacity }}
               aria-hidden="true"
             />
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item.label}
-                onMouseEnter={movePill}
-                onFocus={(event) => movePill(event as unknown as React.MouseEvent<HTMLButtonElement>)}
-                onClick={() => go(item.target)}
-                className="relative z-10 rounded-full px-3 py-2 text-[13px] font-medium whitespace-nowrap text-gray-600 transition-colors duration-300 hover:text-gray-900 focus:outline-none focus-visible:text-gray-900"
-              >
-                {item.label}
-              </button>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const isActive = item.href ? pathname === item.href : false;
+              const baseClasses = `relative z-10 rounded-full px-3 py-2 text-[13px] font-medium whitespace-nowrap transition-colors duration-300 focus:outline-none ${
+                isActive ? "text-brand-green/80 bg-brand-green/10" : "text-gray-600 hover:text-brand-green/80 focus-visible:text-gray-900"
+              }`;
+              
+              if (item.href) {
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onMouseEnter={movePill as any}
+                    onFocus={movePill as any}
+                    onClick={() => setMenuOpen(false)}
+                    className={baseClasses}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              }
+              return (
+                <button
+                  key={item.label}
+                  onMouseEnter={movePill}
+                  onFocus={(event) => movePill(event as unknown as React.MouseEvent<HTMLButtonElement>)}
+                  onClick={() => go(item.target!)}
+                  className={baseClasses}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Actions */}
@@ -185,18 +212,36 @@ export default function Navbar() {
           }`}
         >
           <div className="flex flex-col p-3">
-            {NAV_ITEMS.map((item, index) => (
-              <button
-                key={item.label}
-                onClick={() => go(item.target)}
-                style={{ transitionDelay: menuOpen ? `${index * 45}ms` : "0ms" }}
-                className={`rounded-xl px-3 py-3 text-left text-sm font-medium text-gray-600 transition-all duration-300 hover:bg-gray-50 hover:text-brand-green ${
-                  menuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
+            {NAV_ITEMS.map((item, index) => {
+              const isActive = item.href ? pathname === item.href : false;
+              const mobileBaseClasses = `block rounded-xl px-3 py-3 text-left text-sm font-medium transition-all duration-300 ${
+                menuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+              } ${isActive ? "text-brand-green/80 bg-brand-green/10" : "text-gray-600 hover:bg-brand-green/5 hover:text-brand-green/80"}`;
+              
+              if (item.href) {
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    style={{ transitionDelay: menuOpen ? `${index * 45}ms` : "0ms" }}
+                    className={mobileBaseClasses}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              }
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => go(item.target!)}
+                  style={{ transitionDelay: menuOpen ? `${index * 45}ms` : "0ms" }}
+                  className={mobileBaseClasses}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
             <Link
               href="/login"
               onClick={() => setMenuOpen(false)}
