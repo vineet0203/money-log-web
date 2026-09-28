@@ -124,35 +124,22 @@ export default function Navbar() {
               aria-hidden="true"
             />
             {NAV_ITEMS.map((item) => {
-              const isActive = item.href ? pathname === item.href : false;
+              const isActive = pathname === item.href;
               const baseClasses = `relative z-10 rounded-full px-3 py-2 text-[13px] font-medium whitespace-nowrap transition-colors duration-300 focus:outline-none ${
                 isActive ? "text-brand-green/80 bg-brand-green/10" : "text-gray-600 hover:text-brand-green/80 focus-visible:text-gray-900"
               }`;
-              
-              if (item.href) {
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onMouseEnter={movePill as any}
-                    onFocus={movePill as any}
-                    onClick={() => setMenuOpen(false)}
-                    className={baseClasses}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              }
+
               return (
-                <button
+                <Link
                   key={item.label}
-                  onMouseEnter={movePill}
-                  onFocus={(event) => movePill(event as unknown as React.MouseEvent<HTMLButtonElement>)}
-                  onClick={() => go(item.target!)}
+                  href={item.href}
+                  onMouseEnter={movePill as any}
+                  onFocus={movePill as any}
+                  onClick={() => setMenuOpen(false)}
                   className={baseClasses}
                 >
                   {item.label}
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -213,33 +200,21 @@ export default function Navbar() {
         >
           <div className="flex flex-col p-3">
             {NAV_ITEMS.map((item, index) => {
-              const isActive = item.href ? pathname === item.href : false;
+              const isActive = pathname === item.href;
               const mobileBaseClasses = `block rounded-xl px-3 py-3 text-left text-sm font-medium transition-all duration-300 ${
                 menuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
               } ${isActive ? "text-brand-green/80 bg-brand-green/10" : "text-gray-600 hover:bg-brand-green/5 hover:text-brand-green/80"}`;
-              
-              if (item.href) {
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    style={{ transitionDelay: menuOpen ? `${index * 45}ms` : "0ms" }}
-                    className={mobileBaseClasses}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              }
+
               return (
-                <button
+                <Link
                   key={item.label}
-                  onClick={() => go(item.target!)}
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
                   style={{ transitionDelay: menuOpen ? `${index * 45}ms` : "0ms" }}
                   className={mobileBaseClasses}
                 >
                   {item.label}
-                </button>
+                </Link>
               );
             })}
             <Link
