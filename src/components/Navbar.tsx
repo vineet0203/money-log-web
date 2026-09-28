@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { label: "Budgeting", href: "/budgeting" },
   { label: "Reports", href: "/financial-reports" },
   { label: "Resources", href: "/resources" },
+  { label: "How It Works", href: "/how-it-works" },
   { label: "Pricing", href: "/pricing" },
 ];
 
@@ -148,12 +149,6 @@ export default function Navbar() {
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <Link
               href="/login"
-              className="ml-nav-link hidden px-2 text-sm font-semibold text-gray-700 transition-colors hover:text-gray-950 md:block"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/login"
               className="ml-shine ml-press group flex items-center justify-center gap-1.5 rounded-full bg-brand-green px-3 py-2 text-[13px] font-semibold whitespace-nowrap text-white shadow-[0_8px_20px_-10px_rgba(26,143,76,0.9)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-green-dark hover:shadow-[0_14px_28px_-12px_rgba(26,143,76,1)] sm:px-4 sm:text-sm"
             >
               Get Started Free
@@ -217,13 +212,6 @@ export default function Navbar() {
                 </Link>
               );
             })}
-            <Link
-              href="/login"
-              onClick={() => setMenuOpen(false)}
-              className="mt-1 rounded-xl px-3 py-3 text-left text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 md:hidden"
-            >
-              Sign In
-            </Link>
           </div>
         </div>
       </div>
