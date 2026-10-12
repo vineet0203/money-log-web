@@ -42,9 +42,9 @@ const FEATURES = [
     icon: CalendarCheck,
     iconColor: "text-violet-600",
     iconBg: "bg-violet-100",
-    title: "Subscription Plans",
+    title: "Recurring Payment Plans",
     description: "Never miss a recurring payment again.",
-    points: ["View active subscriptions", "Track renewal dates", "Cancel unused plans"],
+    points: ["View active recurring payments", "Track renewal dates", "Cancel unused plans"],
   },
   {
     icon: CreditCard,
@@ -80,7 +80,7 @@ const PILLS_LEFT = [
 ];
 
 const PILLS_RIGHT = [
-  { icon: CalendarCheck, label: "Subscriptions", tint: "bg-violet-600", top: "8%", delay: "0.3s" },
+  { icon: CalendarCheck, label: "Recurring Payments", tint: "bg-violet-600", top: "8%", delay: "0.3s" },
   { icon: CreditCard, label: "Liabilities", tint: "bg-orange-500", top: "32%", delay: "0.9s" },
   { icon: Landmark, label: "Loans", tint: "bg-teal-600", top: "56%", delay: "1.5s" },
 ];

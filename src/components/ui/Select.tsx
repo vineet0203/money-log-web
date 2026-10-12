@@ -14,9 +14,10 @@ interface SelectProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   className?: string;
+  required?: boolean;
 }
 
-export function Select({ label, error, options, value, onChange, placeholder, className = '' }: SelectProps) {
+export function Select({ label, error, options, value, onChange, placeholder, className = '', required }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -36,8 +37,9 @@ export function Select({ label, error, options, value, onChange, placeholder, cl
   return (
     <div className="w-full" ref={containerRef}>
       {label && (
-        <label className="block text-sm font-bold text-[#4F627A] mb-1.5">
+        <label className="block text-sm font-bold text-[#4F627A] mb-1.5 flex items-center gap-1">
           {label}
+          {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <div className="relative">

@@ -1,91 +1,90 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  LayoutDashboard, 
-  ReceiptText, 
-  FileText, 
+  LayoutDashboard,
+  ShoppingCart, 
   CircleDollarSign, 
-  User, 
-  CheckSquare, 
-  BarChart3, 
-  Target,
   ChevronDown,
   ChevronRight,
   Menu,
   ChevronLeft,
-  Bell
+  Bell,
 } from 'lucide-react';
 import { SidebarUserProfile } from './SidebarUserProfile';
 
-const menuItems = [
+type MenuItem = {
+  title: string;
+  icon: React.ElementType;
+  href?: string;
+  items?: { title: string; href: string }[];
+};
+
+const menuItems: MenuItem[] = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
     href: "/dashboard",
   },
   {
-    title: "Subscription Management",
-    icon: ReceiptText,
+    title: "Transactions Management",
+    icon: CircleDollarSign,
     items: [
-      { title: "Subscriptions", href: "/subscriptions" },
+      { title: "Income & Expenses", href: "/transactions" },
+      { title: "Recurring Payments", href: "/subscriptions" },
       { title: "Renewal Reminders", href: "/subscriptions/reminders" },
+      { title: "Categories", href: "/settings/categories" },
     ]
   },
   {
-    title: "Accounts Management",
-    icon: User,
+    title: "Point of Sale",
+    icon: ShoppingCart,
     items: [
-      { title: "Overview", href: "/acc-manage/categories" },
-      { title: "Accounts", href: "/acc-manage/accounts" },
-      { title: "Assets & Net Worth", href: "/acc-manage/assets" },
+      { title: "Sales & Returns", href: "/pos/sales" },
+      { title: "Products & Categories", href: "/pos/products" },
+      { title: "Suppliers & Purchases", href: "/pos/suppliers" },
+      { title: "POS Reports", href: "/pos/reports" },
+      { title: "POS Settings", href: "/pos/settings" }
     ]
   },
-  {
-    title: "Payables & Receivables",
-    icon: CheckSquare,
-    items: [
-      { title: "Payables Tracking", href: "/payables/tracking" },
-      { title: "Receivables Tracking", href: "/receivables/tracking" },
-      { title: "Bills Due Reminder", href: "/payables/bills-due" },
-      { title: "Invoice Tracking", href: "/payables/invoices" },
-    ]
-  },
-  {
-    title: "Budget & Reports",
-    icon: BarChart3,
-    items: [
-      { title: "Budget Management", href: "/budget/management" },
-      { title: "Expense Report", href: "/budget/expense-report" },
-      { title: "Monthly Financial Report", href: "/budget/monthly-report" },
-      { title: "Daily Balance Report", href: "/budget/daily-balance" },
-    ]
-  },
-  {
-    title: "Goals",
-    icon: Target,
-    items: [
-      { title: "Goals Tracking", href: "/goals/tracking" },
-    ]
-  }
 ];
+
+const isItemOrChildActive = (item: MenuItem, path: string): boolean => {
+  if (item.href) {
+    return path === item.href || path.startsWith(`${item.href}/`);
+  }
+  if (item.items) {
+    return item.items.some(sub => path === sub.href || path.startsWith(`${sub.href}/`)) ||
+      (item.title === "Point of Sale" && path.startsWith("/pos"));
+  }
+  return false;
+};
+
+const getInitialOpenMenus = (pathname: string): Record<string, boolean> => {
+  const activeGroup = menuItems.find(item => item.items && isItemOrChildActive(item, pathname));
+  const state: Record<string, boolean> = {};
+  menuItems.forEach(item => {
+    if (item.items) {
+      state[item.title] = activeGroup ? item.title === activeGroup.title : false;
+    }
+  });
+  return state;
+};
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
-    "Subscription Management": true,
-    "Overview": true,
-
-    "Accounts Management": true,
-    "Payables & Receivables": true,
-    "Budget & Reports": true,
-    "Goals": true,
-  });
   const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => getInitialOpenMenus(pathname));
+
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setOpenMenus(getInitialOpenMenus(pathname));
+  }
 
   const toggleMenu = (title: string) => {
     if (isCollapsed) setIsCollapsed(false);
@@ -95,7 +94,7 @@ export function Sidebar() {
     }));
   };
 
-  const allHrefs = React.useMemo(() => {
+  const allHrefs = useMemo(() => {
     return menuItems.flatMap(item => 
       item.items ? item.items.map(sub => sub.href) : [item.href]
     ).filter(Boolean) as string[];
@@ -212,6 +211,7 @@ export function Sidebar() {
                   {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
                   <Link 
                     href={item.href}
+                    onClick={() => setIsMobileOpen(false)}
                     className={`flex text-sm items-center ${isCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl transition-all duration-200 group ${
                       isActive 
                         ? 'bg-[#159A1D] text-white shadow-md' 
@@ -262,6 +262,7 @@ export function Sidebar() {
                       <Link
                         key={subIndex}
                         href={subItem.href}
+                        onClick={() => setIsMobileOpen(false)}
                         className={`flex items-center gap-3 py-1.5 px-3 rounded-lg text-sm transition-colors ${
                           isSubActive ? 'text-white font-medium bg-slate-800/50' : 'text-slate-200 hover:text-white hover:bg-slate-800/30'
                         }`}

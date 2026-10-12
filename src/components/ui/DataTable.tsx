@@ -5,6 +5,7 @@ export interface Column<T> {
   key: string;
   header: string;
   render?: (row: T) => React.ReactNode;
+  cell?: (row: T) => React.ReactNode;
   className?: string;
 }
 
@@ -204,7 +205,7 @@ export function DataTable<T>({
                     )}
                     {columns.map((col, colIndex) => (
                     <td key={colIndex} className={`px-6 py-4 whitespace-nowrap text-slate-600 ${col.className || ''}`}>
-                      {col.render ? col.render(row) : (row as any)[col.key]}
+                      {col.render ? col.render(row) : col.cell ? col.cell(row) : (row as any)[col.key]}
                     </td>
                   ))}
                   </tr>

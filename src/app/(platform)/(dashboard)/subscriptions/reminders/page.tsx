@@ -37,7 +37,7 @@ export default function RenewalRemindersPage() {
   const columns: Column<SubscriptionData>[] = [
     {
       key: 'subscription',
-      header: 'Subscription',
+      header: 'Recurring Payment',
       render: (row) => (
         <div className="flex items-center gap-3">
           <SubscriptionLogo name={row.name} />
@@ -59,6 +59,17 @@ export default function RenewalRemindersPage() {
       )
     },
     {
+      key: 'type',
+      header: 'Type',
+      render: (row) => (
+        <span className={`px-2 py-1 rounded-md text-xs font-bold capitalize ${row.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {row.type || 'expense'}
+        </span>
+      )
+    },
+
+    {
+
       key: 'renewalDate',
       header: 'Renewal Date ↑',
       render: (row) => {
@@ -149,6 +160,7 @@ export default function RenewalRemindersPage() {
           status={row.status} 
           nextBillingDate={row.next_billing_date}
           billingCycle={row.billing_cycle}
+          type={row.type || 'expense'}
         />
       )
     }
@@ -160,7 +172,7 @@ export default function RenewalRemindersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <RemindersStatCard 
           icon={RefreshCw} theme="purple" 
-          title="Total subscriptions" 
+          title="Total recurring payments" 
           value={statsData?.total_count || 0} 
           subLabel={`${statsData?.total_monthly_count || 0} Monthly • ${statsData?.total_yearly_count || 0} Yearly`}
         />
@@ -168,25 +180,25 @@ export default function RenewalRemindersPage() {
           icon={Calendar} theme="red" 
           title="Overdue" 
           value={statsData?.overdue_count || 0} 
-          subLabel="Subscriptions" 
+          subLabel="Payments" 
         />
         <RemindersStatCard 
           icon={Calendar} theme="blue" 
           title="Renew Within 7 days" 
           value={statsData?.within_7_days_count || 0} 
-          subLabel="Subscriptions" 
+          subLabel="Payments" 
         />
         <RemindersStatCard 
           icon={Calendar} theme="green" 
           title="Within 8-30 days" 
           value={statsData?.within_8_30_days_count || 0} 
-          subLabel="Subscriptions" 
+          subLabel="Payments" 
         />
         <RemindersStatCard 
           icon={Calendar} theme="orange" 
           title="Yearly 30-45 days" 
           value={statsData?.yearly_30_45_days_count || 0} 
-          subLabel="Subscriptions" 
+          subLabel="Payments" 
         />
       </div>
 
@@ -197,7 +209,7 @@ export default function RenewalRemindersPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between p-6 gap-4 border-b border-slate-100">
           <div className="flex flex-col">
             <h2 className="text-xl font-extrabold text-slate-900">Upcoming Renewals</h2>
-            <span className="text-sm font-semibold text-blue-500">View and manage your upcoming subscription renewals.</span>
+            <span className="text-sm font-semibold text-blue-500">View and manage your upcoming recurring payment renewals.</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">

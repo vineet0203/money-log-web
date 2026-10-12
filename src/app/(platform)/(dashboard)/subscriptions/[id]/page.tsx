@@ -21,19 +21,20 @@ export default function SubscriptionDetailsPage() {
 
   useEffect(() => {
     if (data?.subscription) {
-      setHeaderData(`#${data.subscription.id} ${data.subscription.name}`, "View and manage your subscription details.", true);
+      setHeaderData(`#${data.subscription.id} ${data.subscription.name}`, "View and manage your recurring payment details.", true);
     }
   }, [setHeaderData, data]);
 
   if (isLoading) {
-    return <div className="p-8 text-center text-slate-500 font-medium">Loading subscription details...</div>;
+    return <div className="p-8 text-center text-slate-500 font-medium">Loading recurring payment details...</div>;
   }
 
   if (error || !data) {
-    return <div className="p-8 text-center text-red-500 font-medium">Failed to load subscription.</div>;
+    return <div className="p-8 text-center text-red-500 font-medium">Failed to load payment details.</div>;
   }
 
   const { subscription, transactions } = data;
+  const isIncome = subscription.type === 'income';
 
   const OverviewRow = ({ icon: Icon, label, value, iconBg = "bg-[#EEF2F6]", iconColor = "text-[#637381]" }: any) => (
     <div className="flex items-center justify-between py-4 border-b border-slate-100 last:border-0">
@@ -54,13 +55,15 @@ export default function SubscriptionDetailsPage() {
       const nextDate = new Date(next_billing_date);
       const diffTime = nextDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
       const maxDays = billing_cycle === 'yearly' ? 30 : 15;
       
       if (diffDays > maxDays) {
-        enqueueSnackbar(`Too early! You can only pay up to ${maxDays} days before the due date.`, { variant: 'warning' });
+        const actionText = data?.subscription?.type === 'income' ? 'accept payment' : 'pay';
+        enqueueSnackbar(`Too early! You can only ${actionText} up to ${maxDays} days before the due date.`, { variant: 'warning' });
         return;
       }
+      
+      
     }
     router.push(`/subscriptions/${id}/pay`);
   };
@@ -89,13 +92,13 @@ export default function SubscriptionDetailsPage() {
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#159A1D] text-white text-sm font-bold shadow-sm hover:bg-[#118218] transition-all whitespace-nowrap"
           >
             <CreditCard size={16} />
-            Pay
+            {data?.subscription?.type === 'income' ? 'Accept Payment' : 'Pay'}
           </button>
           <button 
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold shadow-sm hover:bg-slate-50 transition-all whitespace-nowrap"
           >
             <Pencil size={16} />
-            Edit Subscription
+            {isIncome ? 'Edit Income' : 'Edit Payment'}
           </button>
         </div>
       </div>
@@ -117,7 +120,7 @@ export default function SubscriptionDetailsPage() {
             />
             <OverviewRow 
               icon={Clock} 
-              label="Next Bill" 
+              label={isIncome ? "Next Expected" : "Next Bill"} 
               value={new Date(subscription.next_billing_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} 
               iconBg="bg-orange-50" 
               iconColor="text-orange-500" 
@@ -164,11 +167,11 @@ export default function SubscriptionDetailsPage() {
       {/* Payment History Section */}
       <div className="flex flex-col mt-2">
         <div className="flex items-center justify-between mb-4 px-2">
-          <h3 className="text-lg font-extrabold text-slate-800">Payment History</h3>
+          <h3 className="text-lg font-extrabold text-slate-800">{isIncome ? 'Income History' : 'Payment History'}</h3>
           <span className="text-sm font-bold text-slate-400">{transactions.length} Records</span>
         </div>
         
-        <PaymentHistoryTable transactions={transactions} />
+        <PaymentHistoryTable transactions={transactions} type={subscription.type} />
       </div>
     </div>
   );

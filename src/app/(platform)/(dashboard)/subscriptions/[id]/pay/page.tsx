@@ -38,24 +38,31 @@ export default function SubscriptionPaymentPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    setHeaderData("Make Payment", "Record a manual payment for this subscription.", true);
-  }, [setHeaderData]);
+    // Dynamic header based on loaded subData type
+    const isIncome = subData?.subscription?.type === 'income';
+    setHeaderData(
+      isIncome ? "Accept Payment" : "Make Payment", 
+      isIncome ? "Record an incoming payment for this recurring payment." : "Record a manual payment for this recurring payment.", 
+      true
+    );
+  }, [setHeaderData, subData]);
 
   // Pre-fill form when subscription data loads
   useEffect(() => {
     if (subData?.subscription && !title) {
       setTitle(subData.subscription.name);
+      setType(subData.subscription.type || 'expense');
       setCategoryId(subData.subscription.category_id);
-      setDescription(`Manual payment for ${subData.subscription.name}`);
+      setDescription(`Manual ${subData.subscription.type === 'income' ? 'income receipt' : 'payment'} for ${subData.subscription.name}`);
     }
   }, [subData, title]);
 
   if (subLoading) {
-    return <div className="p-8 text-center text-slate-500">Loading subscription details...</div>;
+    return <div className="p-8 text-center text-slate-500">Loading recurring payment details...</div>;
   }
 
   if (!subData?.subscription) {
-    return <div className="p-8 text-center text-red-500">Subscription not found.</div>;
+    return <div className="p-8 text-center text-red-500">Recurring payment not found.</div>;
   }
 
   const { subscription } = subData;

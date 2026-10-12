@@ -11,7 +11,7 @@ const data = [
   { name: 'Other', value: 200, color: '#EF4444' },
 ];
 
-export function SpendingByCategoryChart() {
+export function SpendingByCategoryChart({ data = [] }: { data?: any[] }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex flex-col h-full min-h-[350px]">
       <div className="flex items-center justify-between mb-4">
@@ -45,7 +45,7 @@ export function SpendingByCategoryChart() {
               stroke="none"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                <Cell key={`cell-${index}`} fill={entry.color || '#3B82F6'} />
               ))}
             </Pie>
             <Tooltip 

@@ -6,9 +6,12 @@ interface DatePickerProps {
   value?: string; // YYYY-MM-DD
   onChange?: (date: string) => void;
   placeholder?: string;
+  required?: boolean;
+  error?: string;
+  className?: string;
 }
 
-export function DatePicker({ label, value, onChange, placeholder }: DatePickerProps) {
+export function DatePicker({ label, value, onChange, placeholder, required, error, className = '' }: DatePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleIconClick = () => {
@@ -36,8 +39,9 @@ export function DatePicker({ label, value, onChange, placeholder }: DatePickerPr
       `}</style>
       
       {label && (
-        <label className="block text-sm font-bold text-[#4F627A] mb-1.5">
+        <label className="block text-sm font-bold text-[#4F627A] mb-1.5 flex items-center gap-1">
           {label}
+          {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <div className="relative">
@@ -48,7 +52,7 @@ export function DatePicker({ label, value, onChange, placeholder }: DatePickerPr
           onChange={(e) => onChange?.(e.target.value)}
           onClick={handleIconClick}
           placeholder={placeholder}
-          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-[#4F627A] placeholder:text-slate-400 hide-native-date-icon cursor-pointer"
+          className={`w-full px-4 py-3 bg-white border rounded-xl text-sm font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-[#4F627A] placeholder:text-slate-400 hide-native-date-icon cursor-pointer ${error ? 'border-red-500' : 'border-slate-200'} ${className}`}
         />
         <button
           type="button"
@@ -58,6 +62,7 @@ export function DatePicker({ label, value, onChange, placeholder }: DatePickerPr
           <CalendarIcon size={18} strokeWidth={2.5} />
         </button>
       </div>
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   );
 }

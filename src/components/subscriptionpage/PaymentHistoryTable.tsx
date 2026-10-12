@@ -11,14 +11,15 @@ interface Transaction {
 }
 
 interface PaymentHistoryTableProps {
+  type?: 'income' | 'expense';
   transactions: Transaction[];
 }
 
-export function PaymentHistoryTable({ transactions }: PaymentHistoryTableProps) {
+export function PaymentHistoryTable({ transactions, type = "expense" }: PaymentHistoryTableProps) {
   if (!transactions || transactions.length === 0) {
     return (
       <div className="py-8 text-center text-slate-400 font-semibold bg-slate-50 rounded-xl border border-dashed border-slate-200">
-        No payment history found.
+        {type === "income" ? "No income history found." : "No payment history found."}
       </div>
     );
   }
@@ -29,7 +30,7 @@ export function PaymentHistoryTable({ transactions }: PaymentHistoryTableProps) 
         <thead>
           <tr className="bg-slate-50/80 text-slate-500 text-[11px] uppercase tracking-wider font-extrabold">
             <th className="py-3 px-4 font-extrabold w-[130px]">Date & Time</th>
-            <th className="py-3 px-4 font-extrabold">Payment</th>
+            <th className="py-3 px-4 font-extrabold">{type === "income" ? "Record" : "Payment"}</th>
             <th className="py-3 px-4 font-extrabold w-[250px]">Description</th>
             <th className="py-3 px-4 font-extrabold w-[100px] text-center">Receipt</th>
             <th className="py-3 px-4 font-extrabold text-right w-[100px]">Amount</th>
@@ -55,7 +56,7 @@ export function PaymentHistoryTable({ transactions }: PaymentHistoryTableProps) 
                       <History size={14} strokeWidth={2.5} />
                     </div>
                     <span className="font-bold text-slate-700 truncate max-w-[150px]">
-                      {tx.title || 'Subscription Payment'}
+                      {tx.title || (type === 'income' ? 'Income Record' : 'Subscription Payment')}
                     </span>
                   </div>
                 </td>

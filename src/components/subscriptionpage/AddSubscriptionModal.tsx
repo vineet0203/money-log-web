@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
+import { Input } from '@/components/ui/input';
 import { useGetCategories } from '@/hooks/queries/categories';
 import { useAddSubscription } from '@/hooks/queries/subscriptions';
 
@@ -11,8 +12,9 @@ interface Props {
 }
 
 export function AddSubscriptionModal({ isOpen, onClose }: Props) {
+  const [type, setType] = useState<'expense' | 'income'>('expense');
   const [billingCycle, setBillingCycle] = useState<'Monthly' | 'Yearly'>('Monthly');
-  const [startDate, setStartDate] = useState('2026-06-27');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [rate, setRate] = useState('');
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -45,6 +47,7 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
       await addSubscription({
         name,
         amount: parseFloat(rate),
+        type,
         billing_cycle: billingCycle.toLowerCase(),
         start_date: startDate,
         category_id: parseInt(categoryId, 10),
@@ -53,9 +56,10 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
       setName('');
       setRate('');
       setCategoryId('');
+      setType('expense');
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.error || 'Failed to add subscription');
+      setErrorMsg(err.response?.data?.error || 'Failed to add recurring payment');
     }
   };
 
@@ -64,8 +68,8 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Add Subscription"
-      submitText={isPending ? 'Adding...' : 'Add Subscription'}
+      title="Add Recurring Payment"
+      submitText={isPending ? 'Adding...' : 'Add Recurring Payment'}
     >
       <div className="space-y-6">
         {errorMsg && (
@@ -73,31 +77,51 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
             {errorMsg}
           </div>
         )}
+        {/* Type Toggle */}
+        <div className="flex bg-slate-100 p-1 rounded-xl shadow-inner gap-1">
+          <button
+            type="button"
+            onClick={() => setType('expense')}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all border ${
+              type === 'expense'
+                ? 'bg-red-50 text-red-600 border-red-200 shadow-sm'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+            }`}
+          >
+            Expense
+          </button>
+          <button
+            type="button"
+            onClick={() => setType('income')}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all border ${
+              type === 'income'
+                ? 'bg-[#E7F8F0] text-[#159A1D] border-[#C5ECD9] shadow-sm'
+                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+            }`}
+          >
+            Income
+          </button>
+        </div>
+
         {/* Name */}
         <div>
-          <label className="block text-sm font-bold text-[#4F627A] mb-1.5">
-            Name
-          </label>
-          <input 
+          <Input 
+            label="Name"
             type="text" 
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Netflix, Spotify" 
-            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-sm text-slate-900 placeholder:text-slate-400 font-medium shadow-sm"
           />
         </div>
 
         {/* Rate */}
         <div>
-          <label className="block text-sm font-bold text-[#4F627A] mb-1.5">
-            Rate ($)
-          </label>
-          <input 
+          <Input 
+            label="Rate ($)"
             type="text" 
             value={rate}
             onChange={handleRateChange}
             placeholder="15.99" 
-            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-sm text-slate-900 placeholder:text-slate-400 font-medium shadow-sm"
           />
         </div>
 

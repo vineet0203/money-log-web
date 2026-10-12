@@ -21,16 +21,16 @@ export default function SubscriptionsPage() {
   const inactiveCount = stats?.inactive_count || '0';
 
   useEffect(() => {
-    setHeaderData("Subscription Management", "Manage all your subscription in one place.");
+    setHeaderData("Recurring Payments", "Manage all your recurring payments in one place.");
   }, [setHeaderData]);
 
   return (
     <div className="mx-auto pb-12 space-y-6">
       {/* Top Stats & Actions Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <SubscriptionStatCard title="On Going Subscriptions" value={ongoingCount.toString().padStart(2, '0')} theme="green" />
-        <SubscriptionStatCard title="Renew Within 7 days" value={upcomingCount.toString().padStart(2, '0')} theme="orange" />
-        <SubscriptionStatCard title="Inactive Subscription" value={inactiveCount.toString().padStart(2, '0')} theme="red" />
+        <SubscriptionStatCard title="Active Payments" value={ongoingCount.toString().padStart(2, '0')} theme="green" />
+        <SubscriptionStatCard title="Due Within 7 Days" value={upcomingCount.toString().padStart(2, '0')} theme="orange" />
+        <SubscriptionStatCard title="Inactive Payments" value={inactiveCount.toString().padStart(2, '0')} theme="red" />
         <AddSubscriptionCard onClick={() => setIsAddModalOpen(true)} />
       </div>
 

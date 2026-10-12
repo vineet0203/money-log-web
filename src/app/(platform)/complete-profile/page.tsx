@@ -104,7 +104,7 @@ export default function CompleteProfilePage() {
           </div>
 
           <p className="text-lg md:text-xl text-green-50 max-w-lg leading-relaxed">
-            Please complete your profile to unlock all features, including tracking your net worth and managing your subscriptions.
+            Please complete your profile to unlock all features, including tracking your net worth and managing your recurring payments.
           </p>
         </div>
 

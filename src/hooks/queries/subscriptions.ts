@@ -6,6 +6,7 @@ export interface SubscriptionData {
   user_id: number;
   name: string;
   amount: string;
+  type: 'expense' | 'income';
   billing_cycle: 'monthly' | 'yearly';
   start_date: string;
   next_billing_date: string;

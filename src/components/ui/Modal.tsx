@@ -12,6 +12,7 @@ export interface ModalProps {
   cancelText?: string;
   submitText?: string;
   isSubmitDisabled?: boolean;
+  maxWidth?: string;
 }
 
 export function Modal({
@@ -24,6 +25,7 @@ export function Modal({
   cancelText = 'Cancel',
   submitText = 'Submit',
   isSubmitDisabled = false,
+  maxWidth = 'max-w-lg',
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -54,7 +56,7 @@ export function Modal({
       />
       
       {/* Modal Container */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col my-8 sm:my-auto">
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${maxWidth} flex flex-col my-8 sm:my-auto`}>
         
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-slate-100 shrink-0">

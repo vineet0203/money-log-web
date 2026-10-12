@@ -60,7 +60,7 @@ const FEATURES = [
     card: "bg-violet-50/60",
     title: "Auto Categorization",
     description:
-      "Transactions are automatically categorized (Payments, Subscriptions, Loans, etc.).",
+      "Transactions are automatically categorized (Payments, Recurring Payments, Loans, etc.).",
   },
   {
     icon: FileText,
@@ -81,7 +81,7 @@ const FEATURES = [
     badge: "bg-teal-100 text-teal-600",
     card: "bg-teal-50/60",
     title: "Get Notifications",
-    description: "Receive alerts for large transactions, subscription renewals and more.",
+    description: "Receive alerts for large transactions, recurring payment renewals and more.",
   },
 ];
 

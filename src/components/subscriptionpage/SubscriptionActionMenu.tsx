@@ -8,13 +8,14 @@ import { useRouter } from 'next/navigation';
 import { useSnackbar } from 'notistack';
 
 interface Props {
+  type?: 'expense' | 'income';
   subscriptionId: string;
   status: 'active' | 'cancelled';
   nextBillingDate?: string;
   billingCycle?: string;
 }
 
-export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate, billingCycle }: Props) {
+export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate, billingCycle, type = 'expense' }: Props) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [modalAction, setModalAction] = useState<'cancel' | 'reactivate' | null>(null);
@@ -42,13 +43,15 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
       const nextDate = new Date(nextBillingDate);
       const diffTime = nextDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      const maxDays = billingCycle === 'yearly' ? 30 : 15;
+            const maxDays = billingCycle === 'yearly' ? 30 : 15;
       
       if (diffDays > maxDays) {
-        enqueueSnackbar(`Too early! You can only pay up to ${maxDays} days before the due date.`, { variant: 'warning' });
+        const actionText = type === 'income' ? 'accept payment' : 'pay';
+        enqueueSnackbar(`Too early! You can only ${actionText} up to ${maxDays} days before the due date.`, { variant: 'warning' });
         return;
       }
+      
+      
     }
     router.push(`/subscriptions/${subscriptionId}/pay`);
   };
@@ -60,7 +63,7 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
       href: `/subscriptions/${subscriptionId}`,
     },
     status === 'active' ? {
-      label: 'Cancel Subscription',
+      label: 'Cancel Payment',
       icon: <XCircle size={16} />,
       hoverColor: 'hover:bg-red-50 hover:text-red-600',
       onClick: () => setModalAction('cancel'),
@@ -71,7 +74,7 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
       onClick: () => setModalAction('reactivate'),
     },
     {
-      label: 'Pay',
+      label: type === 'income' ? 'Accept Payment' : 'Pay',
       icon: <CreditCard size={16} />,
       onClick: handleMarkAsPaid,
     }
@@ -86,7 +89,7 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
         isOpen={modalAction !== null}
         onClose={() => setModalAction(null)}
         title={
-          modalAction === 'cancel' ? 'Cancel Subscription' : 'Reactivate Subscription'
+          modalAction === 'cancel' ? 'Cancel Payment' : 'Reactivate Payment'
         }
         submitText="Confirm"
         onSubmit={() => {
@@ -96,8 +99,8 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
         isSubmitDisabled={updateStatusMutation.isPending}
       >
         <p className="text-slate-600 font-medium">
-          {modalAction === 'cancel' ? 'Are you sure you want to cancel this subscription? This action will mark it as inactive.' :
-           'Are you sure you want to reactivate this subscription?'}
+          {modalAction === 'cancel' ? 'Are you sure you want to cancel this recurring payment? This action will mark it as inactive.' :
+           'Are you sure you want to reactivate this recurring payment?'}
         </p>
       </Modal>
     </>

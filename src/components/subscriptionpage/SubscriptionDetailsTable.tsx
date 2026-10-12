@@ -31,6 +31,7 @@ export function SubscriptionDetailsTable() {
     return {
       id: sub.id.toString(),
       name: sub.name,
+      type: sub.type || 'expense',
       category: sub.category_name || 'Uncategorized',
       dueDate,
       daysLeft: sub.days_left,
@@ -45,7 +46,7 @@ export function SubscriptionDetailsTable() {
   const columns: Column<any>[] = [
     {
       key: 'name',
-      header: 'Subscription',
+      header: 'Payment',
       render: (row) => (
         <div className="flex items-center gap-3">
           <SubscriptionLogo name={row.name} />
@@ -61,13 +62,24 @@ export function SubscriptionDetailsTable() {
       )
     },
     {
+      key: 'type',
+      header: 'Type',
+      render: (row) => (
+        <span className={`px-2 py-1 rounded-md text-xs font-bold capitalize ${row.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {row.type}
+        </span>
+      )
+    },
+
+    {
+
       key: 'dueDate',
       header: 'Due Date',
       render: (row) => (
         <div className="flex flex-col gap-1.5">
           <span className="text-[#849AB4] text-sm leading-none">{row.dueDate}</span>
           <span className={`text-xs font-bold leading-none ${row.daysLeft <= 1 ? 'text-[#EF4444]' : 'text-[#159A1D]'}`}>
-            In {row.daysLeft} {row.daysLeft === 1 ? 'Days' : 'Days'}
+            In {row.daysLeft} {row.daysLeft === 1 ? 'Day' : 'Days'}
           </span>
         </div>
       )
@@ -110,6 +122,7 @@ export function SubscriptionDetailsTable() {
           status={row.dbStatus} 
           nextBillingDate={row.nextBillingDate}
           billingCycle={row.billingCycle}
+          type={row.type}
         />
       )
     }
@@ -119,7 +132,7 @@ export function SubscriptionDetailsTable() {
     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col">
       {/* Header */}
       <div className="p-6 pb-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-900">Subscriptions</h2>
+        <h2 className="text-lg font-bold text-slate-900">All Recurring Payments</h2>
       </div>
 
       {/* Tabs and Filter */}
@@ -168,7 +181,7 @@ export function SubscriptionDetailsTable() {
             totalPages: response?.pagination?.totalPages || 1, 
             totalItems: response?.pagination?.totalItems || 0,
             itemsPerPage: response?.pagination?.itemsPerPage || itemsPerPage,
-            itemName: 'subscriptions',
+            itemName: 'recurring payments',
             onPageChange: (newPage) => setPage(newPage)
           }}
         />
