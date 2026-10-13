@@ -8,6 +8,7 @@ export interface PosSearchInputProps {
   className?: string;
   onClear?: () => void;
   autoFocus?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export function PosSearchInput({
@@ -17,6 +18,7 @@ export function PosSearchInput({
   className = '',
   onClear,
   autoFocus = false,
+  onKeyDown,
 }: PosSearchInputProps) {
   return (
     <div className={`relative flex-1 min-w-[200px] ${className}`}>
@@ -29,6 +31,7 @@ export function PosSearchInput({
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 transition-all focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
       />

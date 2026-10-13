@@ -4,5 +4,7 @@ export * from './PosStatusBadge';
 export * from './PosSearchInput';
 export * from './PosFilterBar';
 export * from './PosPageHeader';
+export * from './PosReceipt';
+export { printThermalReceipt } from '@/lib/posPrint';
 export { Select, type SelectOption } from '@/components/ui/Select';
 export { DataTable, type Column } from '@/components/ui/DataTable';

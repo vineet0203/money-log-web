@@ -347,3 +347,24 @@ body {
 
   .ml-tilt { transition: none; }
 }
+
+/* ==========================================================================
+   POS Thermal Receipt Print Styling
+   Ensures clean 80mm thermal receipt output when printing
+   ========================================================================== */
+@media print {
+  .no-print,
+  [data-no-print="true"],
+  button,
+  nav,
+  header,
+  aside {
+    display: none !important;
+  }
+
+  .pos-receipt-printable {
+    visibility: visible !important;
+    display: flex !important;
+  }
+}
+

@@ -1,609 +1,1291 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { 
   ScanBarcode, 
-  Minus, 
   Plus, 
-  Trash2, 
   CreditCard, 
   Banknote, 
   User, 
-  QrCode, 
   Smartphone,
-  Printer
+  Printer,
+  Check,
+  RotateCcw,
+  ShoppingBag,
+  Sparkles,
+  Barcode,
+  Phone,
 } from 'lucide-react';
 import { usePosSettings } from '@/components/pos/settings/PosSettingsContext';
-import { PosSearchInput } from '@/components/pos/common';
+import { PosSearchInput, PosReceipt, PosReceiptData, printThermalReceipt } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
+import { useGetInfinitePosProducts, useGetPosCategories, PosProduct, PosProductVariant } from '@/hooks/queries/posProducts';
+import { useCreatePosOrder, PosOrder, CreatePosOrderPayload } from '@/hooks/queries/posOrders';
+import { useSnackbar } from 'notistack';
 
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  stock: number;
+export interface CartItem {
+  productId: number;
+  variantId: number;
+  productName: string;
+  variantTitle: string;
   sku: string;
-  image?: string;
+  barcode?: string | null;
+  unitPrice: number;
+  unitCost: number;
+  qty: number;
+  maxStock: number;
 }
 
-const MOCK_PRODUCTS: Product[] = [
-  { id: 1, name: 'Premium Espresso Blend', category: 'Coffee', price: 18.50, stock: 45, sku: 'COF-001', image: 'bg-amber-800' },
-  { id: 2, name: 'Ceramic Pour-Over Dripper', category: 'Equipment', price: 24.00, stock: 12, sku: 'EQP-102', image: 'bg-slate-400' },
-  { id: 3, name: 'Oat Milk Barista Edition', category: 'Dairy', price: 5.50, stock: 80, sku: 'DRY-201', image: 'bg-amber-200' },
-  { id: 4, name: 'Ethiopia Yirgacheffe Beans', category: 'Coffee', price: 22.00, stock: 30, sku: 'COF-002', image: 'bg-amber-700' },
-  { id: 5, name: 'Digital Coffee Scale', category: 'Equipment', price: 35.00, stock: 8, sku: 'EQP-105', image: 'bg-slate-700' },
-  { id: 6, name: 'Reusable Coffee Filter', category: 'Equipment', price: 12.00, stock: 25, sku: 'EQP-109', image: 'bg-zinc-400' },
-  { id: 7, name: 'Cold Brew Blend (1kg)', category: 'Coffee', price: 26.50, stock: 19, sku: 'COF-003', image: 'bg-amber-900' },
-  { id: 8, name: 'Stainless Steel Milk Pitcher', category: 'Equipment', price: 16.00, stock: 15, sku: 'EQP-112', image: 'bg-slate-500' },
-  { id: 9, name: 'Organic Almond Milk', category: 'Dairy', price: 4.75, stock: 42, sku: 'DRY-204', image: 'bg-stone-300' },
-  { id: 10, name: 'Canvas Barista Apron', category: 'Accessories', price: 29.00, stock: 14, sku: 'ACC-301', image: 'bg-emerald-800' },
+interface ProductVariantGroup {
+  product: PosProduct;
+  variants: PosProductVariant[];
+}
+
+// Fallback demo catalog if database has no active products yet
+const FALLBACK_PRODUCTS: PosProduct[] = [
+  {
+    id: 991,
+    name: 'Artisan Espresso Roast (Reserve)',
+    category_id: 1,
+    category_name: 'Coffee Beans',
+    brand_id: null,
+    brand_name: null,
+    description: 'Medium-dark whole bean roast',
+    base_unit: 'bag',
+    is_taxable: true,
+    tax_rate: null,
+    status: 'active',
+    image_url: null,
+    options_config: [{ name: 'Size', values: ['250g', '1kg'] }],
+    variants_count: 2,
+    total_stock: 45,
+    min_price: 18.50,
+    max_price: 48.00,
+    min_stock_alert: 5,
+    stock_status: 'in_stock',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    variants: [
+      {
+        id: 9911,
+        product_id: 991,
+        title: '250g Reserve Bag',
+        sku: 'COF-250G',
+        barcode: '890102030401',
+        cost_price: 9.00,
+        mrp: 20.00,
+        selling_price: 18.50,
+        stock_quantity: 30,
+        is_active: true,
+      },
+      {
+        id: 9912,
+        product_id: 991,
+        title: '1kg Bulk Roaster Bag',
+        sku: 'COF-1KG',
+        barcode: '890102030402',
+        cost_price: 24.00,
+        mrp: 52.00,
+        selling_price: 48.00,
+        stock_quantity: 15,
+        is_active: true,
+      },
+    ],
+  },
+  {
+    id: 992,
+    name: 'Ceramic Pour-Over Dripper',
+    category_id: 2,
+    category_name: 'Merchandise & Gear',
+    brand_id: null,
+    brand_name: null,
+    description: 'V60 spiral ribbed ceramic cone',
+    base_unit: 'pcs',
+    is_taxable: true,
+    tax_rate: null,
+    status: 'active',
+    image_url: null,
+    options_config: [],
+    variants_count: 1,
+    total_stock: 24,
+    min_price: 24.00,
+    max_price: 24.00,
+    min_stock_alert: 5,
+    stock_status: 'in_stock',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    variants: [
+      {
+        id: 9921,
+        product_id: 992,
+        title: 'Standard Matte White',
+        sku: 'EQP-DRI-01',
+        barcode: '890102030403',
+        cost_price: 12.00,
+        mrp: 28.00,
+        selling_price: 24.00,
+        stock_quantity: 24,
+        is_active: true,
+      },
+    ],
+  },
+  {
+    id: 993,
+    name: 'Oat Milk Barista Edition (1L)',
+    category_id: 3,
+    category_name: 'Beverages',
+    brand_id: null,
+    brand_name: null,
+    description: 'Plant-based microfoam milk for lattes',
+    base_unit: 'bottle',
+    is_taxable: true,
+    tax_rate: null,
+    status: 'active',
+    image_url: null,
+    options_config: [],
+    variants_count: 1,
+    total_stock: 60,
+    min_price: 5.50,
+    max_price: 5.50,
+    min_stock_alert: 10,
+    stock_status: 'in_stock',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    variants: [
+      {
+        id: 9931,
+        product_id: 993,
+        title: '1L Tetra Pak',
+        sku: 'MILK-OAT-1L',
+        barcode: '890102030404',
+        cost_price: 2.80,
+        mrp: 6.50,
+        selling_price: 5.50,
+        stock_quantity: 60,
+        is_active: true,
+      },
+    ],
+  },
+  {
+    id: 994,
+    name: 'Single Origin Ethiopia Yirgacheffe',
+    category_id: 1,
+    category_name: 'Coffee Beans',
+    brand_id: null,
+    brand_name: null,
+    description: 'Floral and citrus notes, washed process',
+    base_unit: 'bag',
+    is_taxable: true,
+    tax_rate: null,
+    status: 'active',
+    image_url: null,
+    options_config: [],
+    variants_count: 1,
+    total_stock: 35,
+    min_price: 22.00,
+    max_price: 22.00,
+    min_stock_alert: 5,
+    stock_status: 'in_stock',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    variants: [
+      {
+        id: 9941,
+        product_id: 994,
+        title: '250g Pouch',
+        sku: 'ETH-YIR-250',
+        barcode: '890102030405',
+        cost_price: 11.50,
+        mrp: 25.00,
+        selling_price: 22.00,
+        stock_quantity: 35,
+        is_active: true,
+      },
+    ],
+  },
 ];
 
-const CATEGORIES = ['All', 'Coffee', 'Equipment', 'Dairy', 'Accessories'];
-
 export default function NewSaleTab() {
-  const { receiptSettings, generalSettings } = usePosSettings();
-  const [cart, setCart] = useState<{ product: Product; qty: number }[]>([]);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [paymentModalState, setPaymentModalState] = useState<'closed' | 'select' | 'upi'>('closed');
-  const [customerName, setCustomerName] = useState('Walk-in Customer');
+  const { enqueueSnackbar } = useSnackbar();
+  const { receiptSettings } = usePosSettings();
+  const currencySymbol = receiptSettings.currencySymbol || '$';
 
-  const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item => 
-          item.product.id === product.id ? { ...item, qty: item.qty + 1 } : item
-        );
+  // State
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | number>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [customerName, setCustomerName] = useState('Walk-in Customer');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [selectedTender, setSelectedTender] = useState<'Cash' | 'Card' | 'UPI'>('Cash');
+
+  // Scanner modal state
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [scanModalInput, setScanModalInput] = useState('');
+
+  // Customer details modal (direct edit)
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+
+  // Checkout confirmation modal (asks for customer & payment before checkout)
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+
+  // Success / Receipt Modal
+  const [completedOrder, setCompletedOrder] = useState<PosOrder | null>(null);
+
+  // Debounce search query so backend pagination triggers smoothly
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Backend Infinite Query (Infinite Scroll Pagination inside container)
+  const {
+    data: infiniteData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isProductsLoading,
+  } = useGetInfinitePosProducts({
+    search: debouncedSearch.trim() || undefined,
+    category_id: activeCategoryId === 'all' ? undefined : activeCategoryId,
+    status: 'active',
+    limit: 10,
+  });
+
+  const { data: categoriesData } = useGetPosCategories();
+  const createOrderMutation = useCreatePosOrder();
+
+  // Active Catalog List flattened across all loaded pages
+  const catalogProducts: PosProduct[] = useMemo(() => {
+    const serverList = infiniteData?.pages.flatMap(page => page.data) || [];
+    if (serverList.length > 0) {
+      return serverList;
+    }
+    if (isProductsLoading) return [];
+    // Fallback demo only if not searching and all categories and server is empty
+    if (!debouncedSearch && activeCategoryId === 'all') {
+      return FALLBACK_PRODUCTS;
+    }
+    return [];
+  }, [infiniteData, isProductsLoading, debouncedSearch, activeCategoryId]);
+
+  const totalProductsCount = infiniteData?.pages[0]?.pagination?.total ?? catalogProducts.length;
+
+  // Dedicated container scroll handler for infinite load on scroll
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 120) {
+      if (hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
       }
-      return [...prev, { product, qty: 1 }];
+    }
+  };
+
+  // Reset scroll to top when category or search changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [activeCategoryId, debouncedSearch]);
+
+  // Add a specific variant to the sale ticket
+  const addVariantToCart = (product: PosProduct, variant: PosProductVariant) => {
+    setCart(prev => {
+      const existingIndex = prev.findIndex(item => item.variantId === variant.id);
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          qty: updated[existingIndex].qty + 1,
+        };
+        return updated;
+      }
+
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          variantId: variant.id || 0,
+          productName: product.name,
+          variantTitle: variant.title,
+          sku: variant.sku || `SKU-${product.id}`,
+          barcode: variant.barcode || null,
+          unitPrice: Number(variant.selling_price) || 0,
+          unitCost: Number(variant.cost_price) || 0,
+          qty: 1,
+          maxStock: Number(variant.stock_quantity) || 999,
+        },
+      ];
     });
   };
 
-  const updateQty = (id: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.product.id === id) {
-        const newQty = Math.max(1, item.qty + delta);
-        return { ...item, qty: newQty };
-      }
-      return item;
-    }));
+  const updateQty = (variantId: number, delta: number) => {
+    setCart(prev =>
+      prev
+        .map(item => {
+          if (item.variantId === variantId) {
+            const nextQty = item.qty + delta;
+            return nextQty > 0 ? { ...item, qty: nextQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CartItem[]
+    );
   };
 
-  const removeItem = (id: number) => {
-    setCart(prev => prev.filter(item => item.product.id !== id));
+  const removeItem = (variantId: number) => {
+    setCart(prev => prev.filter(item => item.variantId !== variantId));
   };
 
   const clearCart = () => {
     setCart([]);
   };
 
+  const handleUpdateItemQty = (index: number, newQty: number) => {
+    setCart(prev => {
+      if (newQty <= 0) {
+        return prev.filter((_, i) => i !== index);
+      }
+      const updated = [...prev];
+      updated[index] = { ...updated[index], qty: newQty };
+      return updated;
+    });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setCart(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Barcode quick add scanner handler
+  const handleBarcodeSearch = (scannedCode: string) => {
+    const code = scannedCode.trim().toLowerCase();
+    if (!code) return;
+
+    for (const product of catalogProducts) {
+      const variants = product.variants || [];
+      const match = variants.find(
+        v =>
+          (v.barcode && String(v.barcode).toLowerCase() === code) ||
+          (v.sku && v.sku.toLowerCase() === code)
+      );
+      if (match) {
+        addVariantToCart(product, match);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleScanInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scanModalInput.trim()) return;
+    const found = handleBarcodeSearch(scanModalInput);
+    if (found) {
+      setScanModalInput('');
+      setIsScannerModalOpen(false);
+    } else {
+      enqueueSnackbar(`No product found with barcode/code: "${scanModalInput}"`, { variant: 'warning' });
+    }
+  };
+
+  // Intercept Enter key in search box for instant barcode scan support
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      const found = handleBarcodeSearch(searchQuery);
+      if (found) {
+        setSearchQuery('');
+      }
+    }
+  };
+
+  // =========================================================================
+  // Product & Variant Hierarchical Filter Logic
+  // When user searches for code/barcode/variant title:
+  // Shows parent product with ONLY the matching variant(s)
+  // When user searches product name:
+  // Shows parent product with all its variants
+  const filteredProductGroups: ProductVariantGroup[] = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+
+    return catalogProducts
+      .map(product => {
+        // Active variants or fallback standard
+        const allVariants: PosProductVariant[] =
+          product.variants && product.variants.length > 0
+            ? product.variants.filter(v => v.is_active !== false)
+            : [
+                {
+                  id: product.id,
+                  product_id: product.id,
+                  title: 'Standard',
+                  sku: `SKU-${product.id}`,
+                  barcode: null,
+                  selling_price: product.min_price || 0,
+                  cost_price: 0,
+                  stock_quantity: product.total_stock || 0,
+                  is_active: true,
+                } as PosProductVariant,
+              ];
+
+        // 1. No search query: return product with all its variants
+        if (!q) {
+          return {
+            product,
+            variants: allVariants,
+          };
+        }
+
+        // 2. Search query is present:
+        // Check if specific variants match by barcode, SKU code, or variant title
+        const specificMatchingVariants = allVariants.filter(v => {
+          const barcodeMatch = v.barcode && String(v.barcode).toLowerCase().includes(q);
+          const skuMatch = v.sku && v.sku.toLowerCase().includes(q);
+          const titleMatch = v.title && v.title.toLowerCase().includes(q);
+          return barcodeMatch || skuMatch || titleMatch;
+        });
+
+        // If specific variants match (by barcode/code/title), show the product with ONLY those matching variants!
+        if (specificMatchingVariants.length > 0) {
+          return {
+            product,
+            variants: specificMatchingVariants,
+          };
+        }
+
+        // Otherwise, if parent product name or description matches, show the product with all its variants
+        const productNameMatches =
+          product.name.toLowerCase().includes(q) ||
+          (product.description && product.description.toLowerCase().includes(q));
+
+        if (productNameMatches) {
+          return {
+            product,
+            variants: allVariants,
+          };
+        }
+
+        return {
+          product,
+          variants: allVariants,
+        };
+      })
+      .filter(Boolean) as ProductVariantGroup[];
+  }, [catalogProducts, debouncedSearch]);
+
+  // Calculations
   const totalItemsCount = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.qty, 0);
   }, [cart]);
 
   const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+    return cart.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
   }, [cart]);
 
-  const tax = (subtotal * generalSettings.defaultTaxRate) / 100;
-  const total = subtotal + tax;
+  const taxes = receiptSettings.taxes && receiptSettings.taxes.length > 0
+    ? receiptSettings.taxes
+    : [{ id: 'tax-1', name: 'Sales Tax', percentage: 8.0 }];
 
-  const filteredProducts = useMemo(() => {
-    return MOCK_PRODUCTS.filter(product => {
-      const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
-      const q = searchQuery.trim().toLowerCase();
-      const matchesSearch = !q || 
-        product.name.toLowerCase().includes(q) ||
-        product.sku.toLowerCase().includes(q) ||
-        product.category.toLowerCase().includes(q);
-      return matchesCategory && matchesSearch;
-    });
-  }, [activeCategory, searchQuery]);
+  const totalTaxPercentage = taxes.reduce((sum, t) => sum + (Number(t.percentage) || 0), 0);
 
-  const handleScanMock = () => {
-    // Quick barcode scan simulation: adds the first coffee item
-    const itemToScan = MOCK_PRODUCTS[0];
-    addToCart(itemToScan);
+  const taxAmount = receiptSettings.isTaxInclusive
+    ? (subtotal * totalTaxPercentage) / (100 + totalTaxPercentage)
+    : (subtotal * totalTaxPercentage) / 100;
+
+  const grandTotal = receiptSettings.isTaxInclusive
+    ? subtotal
+    : subtotal + taxAmount;
+
+  // Complete Order & Checkout
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+
+    try {
+      const payload: CreatePosOrderPayload = {
+        customer_name: customerName.trim() || 'Walk-in Customer',
+        customer_phone: customerPhone.trim() || undefined,
+        register_label: 'Terminal #01',
+        subtotal: Number(subtotal.toFixed(2)),
+        discount_total: 0.0,
+        tax_total: Number(taxAmount.toFixed(2)),
+        grand_total: Number(grandTotal.toFixed(2)),
+        payment_mode: selectedTender,
+        payment_amount: Number(grandTotal.toFixed(2)),
+        payment_reference: selectedTender === 'UPI' ? receiptSettings.upiId : undefined,
+        receipt_config: receiptSettings,
+        items: cart.map(item => ({
+          variant_id: item.variantId,
+          item_name: `${item.productName}${item.variantTitle && item.variantTitle !== 'Default' && item.variantTitle !== 'Standard' ? ` (${item.variantTitle})` : ''}`,
+          sku: item.sku,
+          quantity: item.qty,
+          unit_price: item.unitPrice,
+          unit_cost: item.unitCost,
+          discount_amount: 0,
+          tax_amount: Number(((item.unitPrice * item.qty * totalTaxPercentage) / 100).toFixed(2)),
+          total_amount: Number((item.unitPrice * item.qty).toFixed(2)),
+        })),
+      };
+
+      const result = await createOrderMutation.mutateAsync(payload);
+      setCompletedOrder(result);
+      setIsCheckoutModalOpen(false);
+      enqueueSnackbar(`Order #${result.order_number || ''} completed successfully!`, { variant: 'success' });
+
+      if (receiptSettings.autoPrintReceipt) {
+        setTimeout(() => {
+          printThermalReceipt('pos-completed-receipt');
+        }, 500);
+      }
+    } catch (err: unknown) {
+      console.error('Checkout failed:', err);
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      enqueueSnackbar(msg || 'Failed to complete sale. Please try again.', { variant: 'error' });
+    }
   };
 
+  const handleStartNextSale = () => {
+    setCompletedOrder(null);
+    clearCart();
+    setCustomerName('Walk-in Customer');
+    setCustomerPhone('');
+    setIsCheckoutModalOpen(false);
+  };
+
+  // Structured Receipt Data for Current Sale
+  const currentReceiptData: PosReceiptData = useMemo(() => ({
+    orderNumber: '#DRAFT-SALE',
+    title: 'Tax Invoice / Current Sale',
+    date: new Date(),
+    registerLabel: 'Terminal #01 (Active)',
+    cashierName: 'Store Lead',
+    customerName,
+    customerPhone: customerPhone || null,
+    items: cart.map(item => ({
+      id: item.variantId,
+      name: item.productName,
+      variantTitle: item.variantTitle,
+      sku: item.sku,
+      barcode: item.barcode,
+      price: item.unitPrice,
+      qty: item.qty,
+      total: item.unitPrice * item.qty,
+    })),
+    subtotal,
+    discountTotal: 0,
+    taxTotal: taxAmount,
+    taxes: taxes.map(t => ({
+      id: t.id,
+      name: t.name,
+      percentage: t.percentage,
+      amount: (subtotal * (Number(t.percentage) || 0)) / 100,
+    })),
+    grandTotal,
+    paymentMode: selectedTender,
+    paymentReference: selectedTender === 'UPI' ? receiptSettings.upiId : undefined,
+  }), [
+    customerName,
+    customerPhone,
+    cart,
+    subtotal,
+    taxAmount,
+    taxes,
+    grandTotal,
+    selectedTender,
+    receiptSettings.upiId,
+  ]);
+
+  // Structured Receipt Data for Completed Sale
+  const completedReceiptData: PosReceiptData | null = useMemo(() => {
+    if (!completedOrder) return null;
+    return {
+      orderNumber: completedOrder.order_number,
+      title: 'Tax Invoice / Receipt',
+      date: completedOrder.created_at || completedOrder.order_date,
+      registerLabel: completedOrder.register_label || 'Terminal #01',
+      cashierName: 'Store Lead',
+      customerName: completedOrder.customer_name || 'Walk-in Customer',
+      customerPhone: completedOrder.customer_phone || customerPhone || null,
+      items: (completedOrder.items || []).map(item => ({
+        id: item.id,
+        name: item.item_name,
+        sku: item.sku,
+        price: Number(item.unit_price),
+        qty: Number(item.quantity),
+        total: Number(item.total_amount),
+      })),
+      subtotal: Number(completedOrder.subtotal),
+      discountTotal: Number(completedOrder.discount_total || 0),
+      taxTotal: Number(completedOrder.tax_total || 0),
+      grandTotal: Number(completedOrder.grand_total),
+      paymentMode: completedOrder.payment?.payment_mode || completedOrder.payment_mode || selectedTender,
+      paymentReference: completedOrder.payment?.reference_number || undefined,
+    };
+  }, [completedOrder, customerPhone, selectedTender]);
+
+  // Full address format for receipt
+  const fullAddress = [
+    receiptSettings.addressLine1,
+    receiptSettings.addressLine2,
+    [receiptSettings.city, receiptSettings.state, receiptSettings.postalCode].filter(Boolean).join(', ')
+  ].filter(Boolean).join(', ');
+
+  const currentDateDisplay = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-220px)] min-h-[620px]">
-      {/* Products Section (Listing View by default) */}
-      <div className="flex-1 min-w-0 flex flex-col bg-white rounded-xl shadow-xs border border-slate-100 overflow-hidden">
-        {/* Header / Search & View Controls */}
-        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3 bg-white">
-          <PosSearchInput 
-            placeholder="Search products by name or SKU..." 
+    <div className="flex flex-col xl:flex-row gap-6 min-h-[700px] items-start">
+      {/* ======================================================== */}
+      {/* Left Column: Product & Variant Tree Hierarchy            */}
+      {/* Shows Product -> Nested Variants with Barcodes           */}
+      {/* ======================================================== */}
+      <div className="flex-1 w-full min-w-0 bg-white rounded-2xl shadow-xs border border-slate-200/90 overflow-hidden flex flex-col">
+        {/* Top Header & Search Bar */}
+        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-white">
+          <PosSearchInput
+            placeholder="Search by product name, SKU code, or scan barcode..."
             value={searchQuery}
             onChange={setSearchQuery}
-            className="flex-1 min-w-[200px]"
+            onKeyDown={handleSearchKeyDown}
+            className="flex-1 min-w-[220px]"
           />
 
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={handleScanMock}
-            title="Scan barcode to add product"
-            className="gap-2"
-          >
-            <ScanBarcode size={18} className="text-slate-600" />
-            <span>Scan</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsScannerModalOpen(true)}
+              title="Barcode Scanner Quick Input"
+              className="gap-2 text-slate-700 hover:text-slate-900 border-slate-200"
+            >
+              <ScanBarcode size={16} className="text-[#159A1D]" />
+              <span className="font-semibold text-xs">Scan Barcode</span>
+            </Button>
+          </div>
         </div>
 
-        {/* Categories Bar */}
-        <div className="px-4 py-2.5 border-b border-slate-100 flex gap-2 overflow-x-auto bg-slate-50/50">
-          {CATEGORIES.map(cat => (
-            <button 
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                activeCategory === cat 
-                  ? 'bg-[#159A1D] text-white shadow-xs' 
+        {/* Categories Filter Tabs */}
+        <div className="px-4 py-2.5 border-b border-slate-100 flex gap-2 overflow-x-auto bg-slate-50/60 no-scrollbar">
+          <button
+            type="button"
+            onClick={() => setActiveCategoryId('all')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              activeCategoryId === 'all'
+                ? 'bg-[#159A1D] text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            All Items ({totalProductsCount})
+          </button>
+
+          {(categoriesData || []).map(cat => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCategoryId(cat.id)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                activeCategoryId === cat.id
+                  ? 'bg-[#159A1D] text-white shadow-xs'
                   : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              {cat}
+              {cat.name} {cat.product_count !== undefined ? `(${cat.product_count})` : ''}
             </button>
           ))}
         </div>
 
-        {/* Products Table Listing */}
-        <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-xs">
-                  <th className="py-3 px-4">Product</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Stock</th>
-                  <th className="py-3 px-4">Price</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredProducts.map(product => {
-                  const inCart = cart.find(item => item.product.id === product.id);
-                  return (
-                    <tr 
-                      key={product.id}
-                      onClick={() => addToCart(product)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                    >
-                      <td className="py-3 px-4">
-                        <div>
-                          <div className="font-semibold text-slate-800 group-hover:text-[#159A1D] transition-colors">
-                            {product.name}
-                          </div>
-                          <div className="text-xs text-slate-400 font-mono">
-                            {product.sku}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">
-                          {product.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          product.stock <= 10 
-                            ? 'bg-amber-50 text-amber-700' 
-                            : 'bg-emerald-50 text-emerald-700'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${product.stock <= 10 ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
-                          {product.stock} in stock
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-bold text-slate-900">${product.price.toFixed(2)}</span>
-                      </td>
-                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => addToCart(product)}
-                          className="px-3 py-1.5 bg-[#159A1D] hover:bg-[#128218] text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-xs"
-                        >
-                          <Plus size={14} /> 
-                          <span>Add</span>
-                          {inCart && (
-                            <span className="bg-white/25 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none min-w-[16px] text-center">
-                              {inCart.qty}
-                            </span>
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {filteredProducts.length === 0 && (
-              <div className="py-16 text-center text-slate-400">
-                <p className="text-sm font-medium">No products match your criteria</p>
-                <p className="text-xs text-slate-400 mt-1">Try adjusting the search query or category filter</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-      {/* Cart Section (Wide Current Sale Area) */}
-      <div className="w-full lg:w-[480px] xl:w-[520px] shrink-0 flex flex-col bg-white rounded-xl shadow-xs border border-slate-100 overflow-hidden">
-        {/* Cart Header */}
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <h3 className="font-bold text-slate-800 text-base">Current Sale</h3>
-            {totalItemsCount > 0 && (
-              <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-[#159A1D]/10 text-[#159A1D] border border-[#159A1D]/20">
-                {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {cart.length > 0 && (
-              <button 
-                onClick={clearCart}
-                title="Clear current cart"
-                className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-md font-medium transition-colors"
-              >
-                Clear
-              </button>
-            )}
-            <button 
-              onClick={() => {
-                const name = window.prompt("Enter customer name:", customerName);
-                if (name && name.trim()) setCustomerName(name.trim());
-              }}
-              title="Click to edit customer name"
-              className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-2xs hover:border-[#159A1D] transition-colors cursor-pointer"
-            >
-              <User size={14} className="text-[#159A1D]" />
-              <span>{customerName}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Cart Items (Wider, Spacious Layout) */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {cart.length === 0 ? (
-            <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-slate-400 py-12">
-              <div className="w-16 h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mb-3">
-                <ShoppingCartIcon className="text-slate-300" size={30} />
-              </div>
-              <p className="font-semibold text-slate-600 text-sm">Cart is empty</p>
-              <p className="text-xs text-slate-400 mt-1 text-center max-w-[220px]">
-                Click items in the product listing on the left to start a sale
+        {/* Products & Variants List */}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto max-h-[calc(100vh-270px)] min-h-[480px] p-4 space-y-3"
+        >
+          {isProductsLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+              <div className="h-6 w-6 border-2 border-[#159A1D] border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-medium">Loading store inventory...</p>
+            </div>
+          ) : filteredProductGroups.length === 0 ? (
+            <div className="py-24 text-center text-slate-400 space-y-2">
+              <ShoppingBag size={36} className="mx-auto text-slate-300 stroke-[1.5]" />
+              <p className="text-sm font-semibold text-slate-700">No matching products or variants</p>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                No items match your code, barcode, or category search.
               </p>
             </div>
           ) : (
-            cart.map(item => (
-              <div 
-                key={item.product.id} 
-                className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200/80 hover:border-slate-300 transition-colors shadow-2xs"
-              >
-                {/* Left: Product Details */}
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-sm font-semibold text-slate-800 truncate" title={item.product.name}>
-                    {item.product.name}
-                  </h4>
-                  <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <span>${item.product.price.toFixed(2)} / ea</span>
-                    <span>•</span>
-                    <span className="font-mono">{item.product.sku}</span>
+            filteredProductGroups.map(group => {
+              return (
+                <div
+                  key={group.product.id}
+                  className="border border-slate-200/90 rounded-xl overflow-hidden bg-white shadow-2xs transition-all hover:border-slate-300"
+                >
+                  {/* Product Header Row */}
+                  <div className="bg-slate-50/80 px-4 py-2.5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-2 h-2 rounded-full bg-[#159A1D] shrink-0" />
+                      <h4 className="font-bold text-slate-800 text-sm truncate">
+                        {group.product.name}
+                      </h4>
+                      {group.product.category_name && (
+                        <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-600 rounded-md text-[10.5px] font-medium shrink-0">
+                          {group.product.category_name}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs shrink-0 text-slate-500">
+                      <span className="text-[11px] font-medium text-slate-400">
+                        {group.variants.length} {group.variants.length === 1 ? 'variant' : 'variants'}
+                      </span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-[11px] font-semibold text-slate-700">
+                        Total Stock: {group.product.total_stock || 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Variants List Nested Under Product */}
+                  <div className="divide-y divide-slate-100">
+                    {group.variants.map((v, idx) => {
+                      const inCart = cart.find(c => c.variantId === v.id);
+                      const isOutOfStock = (v.stock_quantity || 0) <= 0;
+
+                      return (
+                        <div
+                          key={v.id || idx}
+                          onClick={() => !isOutOfStock && addVariantToCart(group.product, v)}
+                          className={`px-4 py-2.5 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 hover:bg-emerald-50/30 transition-colors cursor-pointer group ${
+                            isOutOfStock ? 'opacity-60 cursor-not-allowed bg-slate-50/30' : ''
+                          }`}
+                        >
+                          {/* Left: Variant Name, Barcode & SKU Code */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400 font-mono text-xs">↳</span>
+                              <span className="font-semibold text-slate-900 text-xs sm:text-sm group-hover:text-[#159A1D] transition-colors">
+                                {v.title}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 mt-1 pl-4 text-[11px]">
+                              {/* Barcode badge */}
+                              {v.barcode ? (
+                                <span className="inline-flex items-center gap-1 font-mono text-[10.5px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200/80 font-medium">
+                                  <Barcode size={13} className="text-slate-600" />
+                                  <span>{v.barcode}</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-400 italic">
+                                  <Barcode size={12} />
+                                  <span>No Barcode</span>
+                                </span>
+                              )}
+
+                              {/* SKU Code */}
+                              {v.sku && (
+                                <span className="font-mono text-slate-500 text-[10.5px]">
+                                  SKU: {v.sku}
+                                </span>
+                              )}
+
+                              {/* Stock status */}
+                              <span
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                  isOutOfStock
+                                    ? 'bg-rose-50 text-rose-700'
+                                    : (v.stock_quantity || 0) <= 5
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : 'bg-emerald-50 text-emerald-700'
+                                }`}
+                              >
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    isOutOfStock
+                                      ? 'bg-rose-500'
+                                      : (v.stock_quantity || 0) <= 5
+                                      ? 'bg-amber-500'
+                                      : 'bg-emerald-500'
+                                  }`}
+                                />
+                                {isOutOfStock ? 'Out of Stock' : `${v.stock_quantity} in stock`}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right: Price & Add Button */}
+                          <div
+                            className="flex items-center gap-3 shrink-0 ml-auto"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <span className="font-bold text-slate-900 font-mono text-sm sm:text-base">
+                              ${Number(v.selling_price).toFixed(2)}
+                            </span>
+
+                            <button
+                              type="button"
+                              disabled={isOutOfStock}
+                              onClick={() => addVariantToCart(group.product, v)}
+                              className="px-3 py-1.5 bg-[#159A1D] hover:bg-[#128218] text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Plus size={14} />
+                              <span>Add</span>
+                              {inCart && inCart.qty > 0 && (
+                                <span className="bg-white/30 text-white px-1.5 py-0.2 rounded-full text-[10px] font-bold leading-none min-w-[16px] text-center">
+                                  {inCart.qty}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-
-                {/* Middle: Stepper Controls */}
-                <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-1 border border-slate-200 shrink-0">
-                  <button 
-                    onClick={() => updateQty(item.product.id, -1)} 
-                    className="p-1 hover:bg-white rounded text-slate-600 transition-colors"
-                    title="Decrease quantity"
-                  >
-                    <Minus size={13} />
-                  </button>
-                  <span className="text-xs font-bold w-6 text-center text-slate-800">
-                    {item.qty}
-                  </span>
-                  <button 
-                    onClick={() => updateQty(item.product.id, 1)} 
-                    className="p-1 hover:bg-white rounded text-slate-600 transition-colors"
-                    title="Increase quantity"
-                  >
-                    <Plus size={13} />
-                  </button>
-                </div>
-
-                {/* Right: Item Total & Delete */}
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <span className="font-bold text-slate-800 text-sm min-w-[60px] text-right">
-                    ${(item.product.price * item.qty).toFixed(2)}
-                  </span>
-                  <button 
-                    onClick={() => removeItem(item.product.id)} 
-                    className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg text-slate-400 transition-colors"
-                    title="Remove item"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
-        </div>
 
-        {/* Checkout Summary */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100">
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between text-sm text-slate-600">
-              <span>Subtotal ({totalItemsCount} items)</span>
-              <span className="font-semibold text-slate-800">${subtotal.toFixed(2)}</span>
+          {/* Infinite Scroll Fetching / End of List Indicator */}
+          {isFetchingNextPage && (
+            <div className="py-3 flex items-center justify-center gap-2 text-xs font-medium text-[#159A1D] bg-white/80 border border-emerald-100 rounded-xl shadow-2xs">
+              <div className="h-4 w-4 border-2 border-[#159A1D] border-t-transparent rounded-full animate-spin" />
+              <span>Loading more products...</span>
             </div>
-            <div className="flex justify-between text-sm text-slate-600">
-              <span>Tax (8%)</span>
-              <span className="font-semibold text-slate-800">${tax.toFixed(2)}</span>
+          )}
+
+          {!hasNextPage && catalogProducts.length > 0 && !isProductsLoading && (
+            <div className="py-3 text-center text-[11px] font-medium text-slate-400">
+              Showing all {totalProductsCount} products
             </div>
-            <div className="flex justify-between text-lg font-bold text-slate-800 pt-2 border-t border-slate-200">
-              <span>Total</span>
-              <span className="text-xl text-[#159A1D]">${total.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <button 
-            disabled={cart.length === 0}
-            onClick={() => setPaymentModalState('select')}
-            className="w-full py-3 bg-[#159A1D] border border-[#159A1D] rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:bg-[#128218] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-base"
-          >
-            Pay ${total.toFixed(2)}
-          </button>
+          )}
         </div>
       </div>
 
-      {/* Payment Modals */}
-      <Modal 
-        isOpen={paymentModalState !== 'closed'} 
-        onClose={() => setPaymentModalState('closed')}
-        title={paymentModalState === 'select' ? 'Select Payment Method' : 'UPI Payment'}
-        cancelText={paymentModalState === 'upi' ? 'Close' : 'Cancel'}
-      >
-        {paymentModalState === 'select' && (
-          <div className="grid grid-cols-3 gap-4">
-            <button 
-              onClick={() => {
-                setPaymentModalState('closed');
-                clearCart();
-              }}
-              className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-slate-200 rounded-2xl hover:border-[#159A1D] hover:bg-green-50 transition-all text-slate-700"
-            >
-              <Banknote size={32} />
-              <span className="font-semibold">Cash</span>
-            </button>
-            <button 
-              onClick={() => {
-                setPaymentModalState('closed');
-                clearCart();
-              }}
-              className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-slate-200 rounded-2xl hover:border-[#159A1D] hover:bg-green-50 transition-all text-slate-700"
-            >
-              <CreditCard size={32} />
-              <span className="font-semibold">Card</span>
-            </button>
-            <button 
-              onClick={() => setPaymentModalState('upi')}
-              className="flex flex-col items-center justify-center gap-3 p-6 border-2 border-[#159A1D] bg-green-50 rounded-2xl hover:bg-green-100 transition-all text-slate-700 shadow-sm"
-            >
-              <Smartphone size={32} className="text-[#159A1D]" />
-              <span className="font-semibold text-[#159A1D]">UPI</span>
-            </button>
+      {/* ======================================================== */}
+      {/* Right Column: "Current Sale" Thermal Receipt Format      */}
+      {/* Matches the exact UI configured in POS Settings         */}
+      {/* ======================================================== */}
+      <div className="w-full xl:w-[480px] 2xl:w-[510px] shrink-0 flex flex-col gap-4">
+        <PosReceipt
+          data={currentReceiptData}
+          mode="interactive"
+          id="pos-thermal-receipt"
+          settings={receiptSettings}
+          onEditCustomer={() => setIsCustomerModalOpen(true)}
+          onUpdateQty={handleUpdateItemQty}
+          onRemoveItem={handleRemoveItem}
+        />
+
+        {/* Payment & Action Controls Area */}
+        <div className="bg-white border border-slate-200/90 shadow-md rounded-2xl p-4 sm:p-5 font-sans no-print space-y-3.5">
+          {/* Total Payable Summary */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">
+                Total Payable
+              </span>
+              <span className="text-xs text-slate-500 font-medium">
+                {cart.reduce((sum, item) => sum + item.qty, 0)} {cart.reduce((sum, item) => sum + item.qty, 0) === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+            <span className="text-xl font-extrabold font-mono text-[#159A1D]">
+              {currencySymbol}{grandTotal.toFixed(2)}
+            </span>
           </div>
-        )}
-        
-        {paymentModalState === 'upi' && (
-          <div className="bg-[#fcffff] border border-slate-200 p-6 sm:p-8 font-sans max-w-[420px] mx-auto relative shadow-sm" style={{ color: '#001c38' }}>
-            {/* Header */}
-            <div className="text-center mb-5">
-              <div className="flex justify-center items-center gap-2 mb-2">
-                {receiptSettings.storeLogoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={receiptSettings.storeLogoUrl}
-                    alt="Store Logo"
-                    className="max-h-12 max-w-[140px] object-contain rounded"
-                  />
-                ) : (
-                  <div className="w-10 h-10 border-t-2 border-b-2 border-amber-500 relative flex justify-center items-center bg-amber-50/30">
-                    <span className="text-2xl font-serif text-[#001c38] font-bold">
-                      {receiptSettings.storeLogoInitial || 'M'}
-                    </span>
-                  </div>
-                )}
-                <div className="text-left">
-                  <h1 className="text-[20px] leading-none font-bold tracking-widest text-[#001c38] uppercase">
-                    {receiptSettings.storeName || 'MONEY LOG POS'}
-                  </h1>
-                  {receiptSettings.storeTagline && (
-                    <p className="text-[9px] tracking-widest text-amber-500 uppercase font-semibold mt-1">
-                      {receiptSettings.storeTagline}
-                    </p>
-                  )}
-                </div>
-              </div>
 
-              {receiptSettings.receiptHeaderNote && (
-                <div className="flex items-center justify-center gap-2 text-[10px] text-amber-600 mb-4">
-                  <div className="w-8 h-px bg-amber-200"></div>
-                  <span className="italic font-medium">{receiptSettings.receiptHeaderNote}</span>
-                  <div className="w-8 h-px bg-amber-200"></div>
-                </div>
-              )}
-              <h2 className="text-xl font-bold uppercase tracking-widest mt-1">Receipt</h2>
+          {/* Payment Method Selector */}
+          <div className="space-y-1.5">
+            <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider block">
+              Payment Method
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedTender('Cash')}
+                className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                  selectedTender === 'Cash'
+                    ? 'border-[#159A1D] bg-emerald-50/80 text-[#159A1D] shadow-2xs ring-1 ring-[#159A1D]'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Banknote size={15} />
+                <span>Cash</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedTender('Card')}
+                className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                  selectedTender === 'Card'
+                    ? 'border-[#159A1D] bg-emerald-50/80 text-[#159A1D] shadow-2xs ring-1 ring-[#159A1D]'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <CreditCard size={15} />
+                <span>Card</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedTender('UPI')}
+                className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${
+                  selectedTender === 'UPI'
+                    ? 'border-[#159A1D] bg-emerald-50/80 text-[#159A1D] shadow-2xs ring-1 ring-[#159A1D]'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Smartphone size={15} />
+                <span>UPI</span>
+              </button>
             </div>
+          </div>
 
-            {/* Info */}
-            <div className="flex justify-between text-[11px] mb-5 font-medium">
-              <div className="space-y-1">
-                <div className="flex"><span className="w-20 text-slate-500">Receipt No</span><span>: #INV-10048</span></div>
-                <div className="flex"><span className="w-20 text-slate-500">Date</span><span>: {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div>
-              </div>
-              <div className="text-right text-[9px] space-y-0.5 text-slate-600 leading-tight">
-                <p className="font-semibold text-[#001c38] text-[10px]">{receiptSettings.storeName}</p>
-                {receiptSettings.addressLine1 && (
-                  <p>{receiptSettings.addressLine1}{receiptSettings.city ? `, ${receiptSettings.city}` : ''}</p>
-                )}
-                {receiptSettings.phone && <p>Tel: {receiptSettings.phone}</p>}
-                {receiptSettings.gstTaxNumber && <p>Tax ID: {receiptSettings.gstTaxNumber}</p>}
-                <p>Customer: {customerName}</p>
-                <p>Mode: UPI Payment</p>
-              </div>
-            </div>
+          {/* Bottom Actions: Clear & Checkout */}
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={cart.length === 0 || createOrderMutation.isPending}
+              onClick={clearCart}
+              className="gap-1 text-slate-500 hover:text-rose-600 border-slate-200"
+              title="Clear current cart"
+            >
+              <RotateCcw size={14} />
+              <span>Clear</span>
+            </Button>
 
-            {/* Table */}
-            <div className="mb-4">
-              <div className="grid grid-cols-12 bg-slate-100 py-2 px-3 text-[11px] font-bold rounded-sm mb-2">
-                <div className="col-span-1">#</div>
-                <div className="col-span-5">Item</div>
-                <div className="col-span-2 text-center">Qty</div>
-                <div className="col-span-2 text-right">Price</div>
-                <div className="col-span-2 text-right">Total</div>
-              </div>
-              
-              <div className="space-y-2.5 px-3 text-[11px] max-h-48 overflow-y-auto">
-                {cart.length > 0 ? (
-                  cart.map((item, idx) => (
-                    <div key={item.product.id} className="grid grid-cols-12">
-                      <div className="col-span-1">{idx + 1}</div>
-                      <div className="col-span-5 truncate">{item.product.name}</div>
-                      <div className="col-span-2 text-center">{item.qty}</div>
-                      <div className="col-span-2 text-right">${item.product.price.toFixed(2)}</div>
-                      <div className="col-span-2 text-right">${(item.product.price * item.qty).toFixed(2)}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="grid grid-cols-12">
-                    <div className="col-span-1">1</div>
-                    <div className="col-span-5">Premium Espresso Blend</div>
-                    <div className="col-span-2 text-center">1</div>
-                    <div className="col-span-2 text-right">$18.50</div>
-                    <div className="col-span-2 text-right">$18.50</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Totals */}
-            <div className="border-t border-b border-slate-300 py-3 mb-5 px-3">
-              <div className="flex justify-end text-[11px] mb-1">
-                <span className="w-24 text-right pr-4">Subtotal</span>
-                <span className="w-20 text-right">${subtotal > 0 ? subtotal.toFixed(2) : '18.50'}</span>
-              </div>
-              {receiptSettings.showTaxBreakdown && (
-                <div className="flex justify-end text-[11px] mb-2">
-                  <span className="w-28 text-right pr-4">Tax ({generalSettings.defaultTaxRate}%)</span>
-                  <span className="w-20 text-right">${tax > 0 ? tax.toFixed(2) : '1.48'}</span>
-                </div>
-              )}
-              <div className="flex justify-end text-[13px] font-bold border-t border-slate-300 pt-2">
-                <span className="w-32 text-right pr-4">Total Amount</span>
-                <span className="w-24 text-right text-[15px] text-[#001c38]">
-                  ${total > 0 ? total.toFixed(2) : '19.98'}
-                </span>
-              </div>
-            </div>
-
-            {/* UPI Box */}
-            {receiptSettings.showUpiQrOnReceipt && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-5 mb-5 shadow-sm">
-                <div className="bg-white p-1.5 border border-slate-200 rounded-lg shrink-0">
-                  {receiptSettings.upiQrType === 'custom' && receiptSettings.upiQrImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={receiptSettings.upiQrImageUrl}
-                      alt="UPI QR Code"
-                      className="w-18 h-18 object-contain"
-                    />
-                  ) : (
-                    <QrCode size={75} strokeWidth={1.5} />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-sm mb-1 text-slate-800">
-                    Pay to: {receiptSettings.upiPayeeName || receiptSettings.storeName}
-                  </div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <span className="italic font-bold text-slate-800 text-lg leading-none">UPI</span>
-                    <div className="flex">
-                      <div className="w-2 h-3 bg-green-500 skew-x-[-15deg]"></div>
-                      <div className="w-2 h-3 bg-orange-500 skew-x-[-15deg] -ml-0.5"></div>
-                    </div>
-                  </div>
-                  <p className="text-[9.5px] text-slate-500 mb-1.5 font-medium">Scan this QR code or use the UPI ID below</p>
-                  <div className="bg-white border border-slate-200 py-1.5 px-3 rounded-md text-[11px] font-mono font-medium inline-block w-full text-center text-slate-700">
-                    {receiptSettings.upiId || 'moneylogpos@okaxis'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            <div className="text-center text-[11px] space-y-1 mb-5">
-              <div className="text-amber-500 text-lg mb-1 leading-none">❦</div>
-              <p className="font-bold">{receiptSettings.receiptFooterNote || 'Thank you for your purchase!'}</p>
-              {receiptSettings.returnPolicy ? (
-                <p className="text-[8.5px] text-slate-500 italic mt-0.5">{receiptSettings.returnPolicy}</p>
+            <Button
+              type="button"
+              disabled={cart.length === 0 || createOrderMutation.isPending}
+              onClick={() => setIsCheckoutModalOpen(true)}
+              className="flex-1 py-2.5 font-bold text-sm gap-2"
+            >
+              {createOrderMutation.isPending ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Processing Sale...</span>
+                </>
               ) : (
-                <p className="text-[9px] uppercase tracking-widest text-slate-500">PLEASE VISIT AGAIN</p>
+                <>
+                  <Check size={16} />
+                  <span>Complete Sale ({currencySymbol}{grandTotal.toFixed(2)})</span>
+                </>
               )}
-            </div>
+            </Button>
+          </div>
+        </div>
+      </div>
 
-            {/* Action Buttons: Print & Done */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+      {/* ======================================================== */}
+      {/* Barcode Scanner Modal Input                              */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={isScannerModalOpen}
+        onClose={() => {
+          setIsScannerModalOpen(false);
+          setScanModalInput('');
+        }}
+        title="Scan or Enter Barcode"
+        cancelText="Cancel"
+      >
+        <form onSubmit={handleScanInputSubmit} className="space-y-4 pt-1">
+          <p className="text-xs text-slate-500">
+            Scan with a handheld laser scanner or manually type the product barcode / SKU code below:
+          </p>
+
+          <div className="relative">
+            <ScanBarcode size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="e.g. 890123328331 or ESP-250G"
+              value={scanModalInput}
+              onChange={e => setScanModalInput(e.target.value)}
+              className="w-full pl-10 pr-3 py-2.5 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsScannerModalOpen(false);
+                setScanModalInput('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" className="gap-1.5">
+              <Plus size={15} />
+              <span>Add to Ticket</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* Customer Details Modal (Direct edit from ticket)         */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        title="Customer Details"
+        cancelText="Cancel"
+      >
+        <div className="space-y-4 pt-1">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Customer Name
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Walk-in Customer"
+                value={customerName}
+                onChange={e => setCustomerName(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
+              />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => window.print()}
-                className="gap-1.5"
+                onClick={() => setCustomerName('Walk-in Customer')}
+                className="text-xs"
               >
-                <Printer size={14} />
-                Print Receipt
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  setPaymentModalState('closed');
-                  clearCart();
-                }}
-              >
-                Complete & New Sale
+                Walk-in
               </Button>
             </div>
           </div>
-        )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Customer Mobile / Phone Number
+            </label>
+            <input
+              type="tel"
+              placeholder="e.g. +1 555-0199 or 9876543210"
+              value={customerPhone}
+              onChange={e => setCustomerPhone(e.target.value)}
+              className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Saved in sales order record and printed on customer receipt.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              onClick={() => setIsCustomerModalOpen(false)}
+              size="sm"
+            >
+              Save Details
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* Checkout & Customer Details Modal                        */}
+      {/* Asks for Customer Name and Number before Checkout        */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        title="Confirm Sale & Customer Details"
+        cancelText="Back to Ticket"
+      >
+        <div className="space-y-4 pt-1">
+          {/* Customer Details Box */}
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                Customer Information
+              </span>
+              <button
+                type="button"
+                onClick={() => setCustomerName('Walk-in Customer')}
+                className="text-[11px] text-[#159A1D] hover:underline font-semibold"
+              >
+                Reset to Walk-in
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Customer Name <span className="text-slate-400 font-normal">(Default: Walk-in Customer)</span>
+              </label>
+              <div className="relative">
+                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe or Walk-in Customer"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Customer Mobile / Phone Number
+              </label>
+              <div className="relative">
+                <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="tel"
+                  placeholder="e.g. +1 555-0199 or 9876543210"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
+                />
+              </div>
+              <p className="text-[10.5px] text-slate-400 mt-1">
+                Saved in sales order record and printed on customer receipt.
+              </p>
+            </div>
+          </div>
+
+          {/* Payment & Amount Confirmation */}
+          <div className="p-3.5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-2 text-xs">
+            <div className="flex justify-between items-center text-slate-600">
+              <span>Items in ticket:</span>
+              <span className="font-bold text-slate-800">{totalItemsCount} units</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-600">
+              <span>Payment Tender:</span>
+              <span className="font-bold text-slate-900">{selectedTender}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-emerald-200/80 font-bold text-sm">
+              <span className="text-slate-900">Total Payable:</span>
+              <span className="text-[#159A1D] font-mono text-base">{currencySymbol}{grandTotal.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCheckoutModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleCheckout}
+              disabled={createOrderMutation.isPending}
+              className="gap-1.5 font-bold"
+            >
+              {createOrderMutation.isPending ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Processing Sale...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={15} />
+                  <span>Confirm & Complete Sale (${grandTotal.toFixed(2)})</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* Sale Completed & Thermal Printable Receipt Modal        */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={Boolean(completedOrder)}
+        onClose={handleStartNextSale}
+        title="Sale Completed Successfully"
+        cancelText="Close"
+      >
+        <div className="space-y-4 text-center">
+          {/* Success Banner */}
+          <div className="flex flex-col items-center justify-center p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl">
+            <div className="w-10 h-10 rounded-full bg-[#159A1D] text-white flex items-center justify-center mb-1.5 shadow-sm">
+              <Check size={22} strokeWidth={2.5} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Payment Received!</h3>
+            <p className="text-xs text-emerald-800 mt-0.5">
+              Receipt #{completedOrder?.order_number} recorded via {completedOrder?.payment?.payment_mode || selectedTender}.
+            </p>
+          </div>
+
+          {/* Quick Summary Pill */}
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs text-left grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-slate-400 block text-[10px]">Customer:</span>
+              <span className="font-semibold text-slate-800 truncate block">
+                {completedOrder?.customer_name}
+              </span>
+              {completedOrder?.customer_phone && (
+                <span className="font-mono text-slate-500 text-[10.5px]">
+                  {completedOrder.customer_phone}
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <span className="text-slate-400 block text-[10px]">Total Paid:</span>
+              <span className="font-bold text-[#159A1D] font-mono text-sm">
+                ${completedOrder?.grand_total.toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          {/* Proper Thermal Receipt UI preview & print target */}
+          <div className="max-h-[360px] overflow-y-auto rounded-xl border border-slate-200 p-2 bg-slate-50/50 flex justify-center">
+            {completedReceiptData && (
+              <PosReceipt
+                data={completedReceiptData}
+                mode="static"
+                id="pos-completed-receipt"
+                settings={completedOrder?.receipt_config || receiptSettings}
+              />
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 no-print">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => printThermalReceipt('pos-completed-receipt')}
+              className="gap-2 text-slate-700 font-semibold"
+            >
+              <Printer size={15} />
+              <span>Print Receipt</span>
+            </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleStartNextSale}
+              className="gap-2"
+            >
+              <Sparkles size={15} />
+              <span>Start Next Sale</span>
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
 }
-
-const ShoppingCartIcon = ({ className, size }: { className?: string; size?: number }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width={size || 24} 
-    height={size || 24} 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <circle cx="8" cy="21" r="1"/>
-    <circle cx="19" cy="21" r="1"/>
-    <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-  </svg>
-);

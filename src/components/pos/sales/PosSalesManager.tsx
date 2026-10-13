@@ -5,10 +5,9 @@ import { useAppData } from '@/providers/AppDataProvider';
 import NewSaleTab from './NewSaleTab';
 import SalesHistoryTab from './SalesHistoryTab';
 import ReturnsTab from './ReturnsTab';
-import ExchangesTab from './ExchangesTab';
 
 import { PosTabs } from '@/components/pos/common';
-import { ShoppingCart, Receipt, RotateCcw, RefreshCw } from 'lucide-react';
+import { ShoppingCart, Receipt, RotateCcw } from 'lucide-react';
 
 export default function PosSalesManager() {
   const { setHeaderData } = useAppData();
@@ -21,8 +20,7 @@ export default function PosSalesManager() {
   const tabs = [
     { id: 'New Sale', label: 'New Sale', icon: ShoppingCart },
     { id: 'Sales History', label: 'Sales History', icon: Receipt },
-    { id: 'Returns & Refunds', label: 'Returns & Refunds', icon: RotateCcw },
-    { id: 'Exchanges', label: 'Exchanges', icon: RefreshCw },
+    { id: 'Returns & Refunds', label: 'Returns & Exchanges', icon: RotateCcw },
   ];
 
   return (
@@ -38,9 +36,7 @@ export default function PosSalesManager() {
       <div className="">
         {activeTab === 'New Sale' && <NewSaleTab />}
         {activeTab === 'Sales History' && <SalesHistoryTab />}
-        
         {activeTab === 'Returns & Refunds' && <ReturnsTab />}
-        {activeTab === 'Exchanges' && <ExchangesTab />}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import api from '@/lib/axios';
 
 export interface PosProductVariant {
@@ -183,6 +183,29 @@ export const useGetPosProducts = (params: PosProductsQueryParams = {}) => {
         pagination: PosProductsPagination;
       }>('/pos/products', { params });
       return data;
+    },
+  });
+};
+
+export const useGetInfinitePosProducts = (params: PosProductsQueryParams = {}) => {
+  return useInfiniteQuery({
+    queryKey: ['pos', 'products', 'infinite', params],
+    queryFn: async ({ pageParam = 1 }) => {
+      const { data } = await api.get<{
+        success: boolean;
+        data: PosProduct[];
+        pagination: PosProductsPagination;
+      }>('/pos/products', {
+        params: {
+          ...params,
+          page: pageParam,
+        },
+      });
+      return data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      return lastPage.pagination.hasNextPage ? lastPage.pagination.page + 1 : undefined;
     },
   });
 };

@@ -41,6 +41,7 @@ export interface PosReceiptSettings {
   receiptHeaderNote: string;
   receiptFooterNote: string;
   returnPolicy: string;
+  returnWindowDays: number;
 
   // Format & Printing Preferences
   paperSize: PaperWidth;
@@ -95,7 +96,8 @@ export const DEFAULT_RECEIPT_SETTINGS: PosReceiptSettings = {
   upiQrImageUrl: '',
   receiptHeaderNote: 'Quality & Freshness Guaranteed',
   receiptFooterNote: 'Thank you for your purchase! Please visit again.',
-  returnPolicy: 'Exchange within 7 days with original receipt. Consumables non-refundable.',
+  returnPolicy: 'Returns accepted within 14 days with original receipt.',
+  returnWindowDays: 14,
   paperSize: '80mm',
   showTaxBreakdown: true,
   showCashierName: true,
