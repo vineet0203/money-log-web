@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { usePosSettings } from './PosSettingsContext';
-import { PosReceiptSettings, PaperWidth } from './types';
 import { ReceiptPreview } from './ReceiptPreview';
 import { 
   Building2, 
@@ -17,20 +16,55 @@ import {
   Upload, 
   Trash2, 
   Smartphone,
-  Eye
+  Eye,
+  Percent,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PosReceiptSettings, PaperWidth, PosTaxRate, DEFAULT_RECEIPT_SETTINGS } from './types';
 
 export function InvoiceReceiptSettingsTab() {
-  const { receiptSettings, updateReceiptSettings, resetToDefaults } = usePosSettings();
+  const { receiptSettings, saveSettings, resetToDefaults, isSaving, isLoading } = usePosSettings();
 
   // Local draft state for smooth editing and explicit "Save Changes"
   const [formData, setFormData] = useState<PosReceiptSettings>(receiptSettings);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'form' | 'preview'>('form');
+
+  // Synchronize draft form when settings load or update from server
+  React.useEffect(() => {
+    setFormData(receiptSettings);
+  }, [receiptSettings]);
 
   const handleChange = <K extends keyof PosReceiptSettings>(key: K, value: PosReceiptSettings[K]) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleAddTax = () => {
+    const newTax: PosTaxRate = {
+      id: `tax-${Date.now()}`,
+      name: '',
+      percentage: 5.0,
+    };
+    setFormData(prev => ({
+      ...prev,
+      taxes: [...(prev.taxes || []), newTax],
+    }));
+  };
+
+  const handleUpdateTax = (id: string, field: 'name' | 'percentage', value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      taxes: (prev.taxes || []).map(t => (t.id === id ? { ...t, [field]: value } : t)),
+    }));
+  };
+
+  const handleRemoveTax = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      taxes: (prev.taxes || []).filter(t => t.id !== id),
+    }));
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,19 +94,24 @@ export function InvoiceReceiptSettingsTab() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateReceiptSettings(formData);
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-    }, 2500);
+    setSaveError(null);
+    try {
+      await saveSettings(formData);
+      setSaveSuccess(true);
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 2500);
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.error || err?.message || 'Failed to save settings');
+    }
   };
 
-  const handleReset = () => {
-    if (confirm('Reset invoice and receipt settings to default configuration?')) {
-      resetToDefaults();
-      setFormData(receiptSettings);
+  const handleReset = async () => {
+    if (confirm('Reset invoice, receipt, and tax settings to default configuration?')) {
+      await resetToDefaults();
+      setFormData(DEFAULT_RECEIPT_SETTINGS);
     }
   };
 
@@ -309,7 +348,104 @@ export function InvoiceReceiptSettingsTab() {
               </div>
             </div>
 
-            {/* Section 3: UPI ID & UPI QR Code Configuration */}
+            {/* Section 3: Taxation Configuration */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Percent size={14} className="text-[#159A1D]" />
+                    Taxation Configuration
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Configure one or multiple tax rates calculated on invoices and printed receipts (Currency: USD $).
+                  </p>
+                </div>
+              </div>
+
+              {/* Tax Rates (Array of Name and Percentage) */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-800 block">
+                      Applicable Tax Rates ({formData.taxes?.length || 0})
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      Configure one or multiple taxes (e.g. Sales Tax, GST, CGST, SGST, VAT)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddTax}
+                    className="text-xs font-bold text-[#159A1D] hover:text-[#128218] flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-emerald-50 transition-colors"
+                  >
+                    <Plus size={14} /> Add Tax Type
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {(formData.taxes || []).map((tax, index) => (
+                    <div key={tax.id || index} className="flex items-center gap-3 p-3 bg-slate-50/70 border border-slate-200 rounded-xl">
+                      <div className="flex-1 space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Tax Name</span>
+                        <input
+                          type="text"
+                          value={tax.name}
+                          onChange={e => handleUpdateTax(tax.id, 'name', e.target.value)}
+                          placeholder="e.g. Sales Tax, GST, CGST"
+                          className="w-full px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
+                        />
+                      </div>
+
+                      <div className="w-28 space-y-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Rate (%)</span>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={tax.percentage}
+                            onChange={e => handleUpdateTax(tax.id, 'percentage', parseFloat(e.target.value) || 0)}
+                            className="w-full px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 pr-6"
+                          />
+                          <span className="absolute right-2.5 top-1.5 text-xs font-bold text-slate-400">%</span>
+                        </div>
+                      </div>
+
+                      {(formData.taxes?.length || 0) > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTax(tax.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors mt-4"
+                          title="Remove tax"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50/50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isTaxInclusive}
+                    onChange={e => handleChange('isTaxInclusive', e.target.checked)}
+                    className="rounded text-[#159A1D] focus:ring-[#159A1D] h-4 w-4"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Tax-Inclusive Pricing (MRP / Gross)</span>
+                    <span className="text-[11px] text-slate-500">
+                      When enabled, product sticker prices already include tax. When disabled, tax is calculated on top at checkout.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Section 4: UPI ID & UPI QR Code Configuration */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
@@ -467,7 +603,7 @@ export function InvoiceReceiptSettingsTab() {
               </div>
             </div>
 
-            {/* Section 4: Header, Footer & Policy */}
+            {/* Section 5: Header, Footer & Policy */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -513,7 +649,7 @@ export function InvoiceReceiptSettingsTab() {
               </div>
             </div>
 
-            {/* Section 5: Formatting & Print Toggles */}
+            {/* Section 6: Formatting & Print Toggles */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -588,18 +724,42 @@ export function InvoiceReceiptSettingsTab() {
               </div>
             </div>
 
+            {/* Save Error Alert */}
+            {saveError && (
+              <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center justify-between">
+                <span>{saveError}</span>
+                <button
+                  type="button"
+                  onClick={() => setSaveError(null)}
+                  className="text-rose-500 hover:text-rose-700 font-bold ml-2"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Actions Bar */}
             <div className="flex items-center justify-between pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleReset}
-                className="gap-1.5"
-              >
-                <RotateCcw size={14} />
-                Reset Defaults
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSaving}
+                  onClick={handleReset}
+                  className="gap-1.5"
+                >
+                  <RotateCcw size={14} />
+                  Reset Defaults
+                </Button>
+
+                {isLoading && (
+                  <span className="text-[11px] text-slate-400 flex items-center gap-1.5 animate-pulse">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#159A1D]" />
+                    Syncing with server...
+                  </span>
+                )}
+              </div>
 
               <div className="flex items-center gap-3">
                 {saveSuccess && (
@@ -610,10 +770,20 @@ export function InvoiceReceiptSettingsTab() {
                 )}
                 <Button
                   type="submit"
+                  disabled={isSaving}
                   className="gap-2"
                 >
-                  <Save size={16} />
-                  Save Receipt Settings
+                  {isSaving ? (
+                    <>
+                      <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      Save Settings
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Product, ProductVariant } from './types';
 import { useProducts } from './ProductsContext';
 import { productFormSchema } from './schema';
+import { Select } from '@/components/pos/common';
 import { 
   Plus, 
   Trash2, 
@@ -54,7 +55,7 @@ function AddProductFormDialog({
   const [name, setName] = useState(productToEdit?.name || '');
   const [category, setCategory] = useState(productToEdit?.category || categories[0]?.name || 'Coffee');
   const [brand, setBrand] = useState(productToEdit?.brand || brands[0]?.name || 'BaristaPro');
-  const [unit, setUnit] = useState(productToEdit?.unit || 'pcs');
+  const unit = productToEdit?.unit || 'pcs';
   const [description, setDescription] = useState(productToEdit?.description || '');
   const [status, setStatus] = useState<'Active' | 'Draft'>(
     productToEdit?.status === 'Draft' ? 'Draft' : 'Active'
@@ -101,7 +102,7 @@ function AddProductFormDialog({
 
   // Group error counts by tab for badges
   const generalErrorsCount = useMemo(() => {
-    const generalFields = ['name', 'category', 'brand', 'unit', 'status', 'description'];
+    const generalFields = ['name', 'category', 'brand', 'status', 'description'];
     return Object.keys(errors).filter(k => generalFields.includes(k)).length;
   }, [errors]);
 
@@ -227,8 +228,11 @@ function AddProductFormDialog({
   };
 
   // Handle Form Submit with Zod validation
-  const handleSubmit = (e?: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmitting) return;
 
     const payload = {
       name: name.trim(),
@@ -263,7 +267,7 @@ function AddProductFormDialog({
 
       // Auto-navigate to tab with errors if user is currently on the other tab
       const hasGeneralErr = Object.keys(newErrors).some(k => 
-        ['name', 'category', 'brand', 'unit', 'status'].includes(k)
+        ['name', 'category', 'brand', 'status'].includes(k)
       );
       const hasVariantErr = Object.keys(newErrors).some(k => 
         k === 'variants' || k.startsWith('variants.')
@@ -307,13 +311,19 @@ function AddProductFormDialog({
       description: payload.description,
     };
 
-    if (productToEdit) {
-      updateProduct(productToEdit.id, productRecord);
-    } else {
-      addProduct(productRecord);
+    try {
+      setIsSubmitting(true);
+      if (productToEdit) {
+        await updateProduct(productToEdit.id, productRecord);
+      } else {
+        await addProduct(productRecord);
+      }
+      onClose();
+    } catch {
+      // Handled in context
+    } finally {
+      setIsSubmitting(false);
     }
-
-    onClose();
   };
 
   return (
@@ -323,7 +333,8 @@ function AddProductFormDialog({
       title={productToEdit ? 'Edit Product' : 'Add New Product'}
       description="Configure general product details and individual variants with custom pricing & stock inventory."
       maxWidth="max-w-4xl"
-      submitText={productToEdit ? 'Save Changes' : 'Create Product'}
+      submitText={isSubmitting ? 'Saving...' : (productToEdit ? 'Save Changes' : 'Create Product')}
+      isSubmitDisabled={isSubmitting}
       onSubmit={() => handleSubmit()}
     >
       <div className="space-y-5 max-h-[72vh] overflow-y-auto pr-1 text-slate-800">
@@ -402,97 +413,62 @@ function AddProductFormDialog({
         {/* Tab 1: General Info */}
         {activeTab === 'general' && (
           <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Product Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ethiopia Yirgacheffe Beans"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (errors.name) {
-                      setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
-                    }
-                  }}
-                  className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] ${
-                    errors.name ? 'border-red-400 bg-red-50/20' : 'border-slate-200'
-                  }`}
-                />
-                {errors.name && (
-                  <p className="text-[11px] text-red-600 mt-1 font-medium">{errors.name}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Unit of Measure <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
-                >
-                  <option value="pcs">Pieces (pcs)</option>
-                  <option value="pack">Pack / Bag</option>
-                  <option value="bottle">Bottle</option>
-                  <option value="kg">Kilogram (kg)</option>
-                  <option value="gram">Gram (g)</option>
-                  <option value="box">Box</option>
-                  <option value="liter">Liter (L)</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Product Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Ethiopia Yirgacheffe Beans"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) {
+                    setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
+                  }
+                }}
+                className={`w-full px-3.5 py-2.5 bg-slate-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] ${
+                  errors.name ? 'border-red-400 bg-red-50/20' : 'border-slate-200'
+                }`}
+              />
+              {errors.name && (
+                <p className="text-[11px] text-red-600 mt-1 font-medium">{errors.name}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
+                <Select
+                  label="Category"
+                  required
+                  error={errors.category}
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
-                >
-                  {categories.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
-                {errors.category && (
-                  <p className="text-[11px] text-red-600 mt-1 font-medium">{errors.category}</p>
-                )}
+                  onChange={setCategory}
+                  options={categories.map(c => ({ value: c.name, label: c.name }))}
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Brand <span className="text-red-500">*</span>
-                </label>
-                <select
+                <Select
+                  label="Brand"
+                  required
+                  error={errors.brand}
                   value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
-                >
-                  {brands.map(b => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
-                {errors.brand && (
-                  <p className="text-[11px] text-red-600 mt-1 font-medium">{errors.brand}</p>
-                )}
+                  onChange={setBrand}
+                  options={brands.map(b => ({ value: b.name, label: b.name }))}
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Product Status</label>
-                <select
+                <Select
+                  label="Product Status"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as 'Active' | 'Draft')}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
-                >
-                  <option value="Active">Active (Available in store POS)</option>
-                  <option value="Draft">Draft (Hidden)</option>
-                </select>
+                  onChange={(val) => setStatus(val as 'Active' | 'Draft')}
+                  options={[
+                    { value: 'Active', label: 'Active (Available in store POS)' },
+                    { value: 'Draft', label: 'Draft (Hidden)' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -602,21 +578,23 @@ function AddProductFormDialog({
                 <div className="space-y-2">
                   {attributeRows.map((attr, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <select
-                        value={attr.type}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setAttributeRows(prev => prev.map((a, i) => i === idx ? { ...a, type: val } : a));
-                        }}
-                        className="w-32 px-3 py-2 bg-white border border-purple-200 rounded-lg text-xs font-semibold text-slate-800"
-                      >
-                        <option value="Size">Size</option>
-                        <option value="Color">Color</option>
-                        <option value="Volume">Volume</option>
-                        <option value="Flavor">Flavor</option>
-                        <option value="Roast">Roast</option>
-                        <option value="Material">Material</option>
-                      </select>
+                      <div className="w-36">
+                        <Select
+                          size="sm"
+                          value={attr.type}
+                          onChange={(val) => {
+                            setAttributeRows(prev => prev.map((a, i) => i === idx ? { ...a, type: val } : a));
+                          }}
+                          options={[
+                            { value: 'Measure', label: 'Measure (Weight/Vol)' },
+                            { value: 'Size', label: 'Size' },
+                            { value: 'Pack', label: 'Pack / Quantity' },
+                            { value: 'Flavor', label: 'Flavor' },
+                            { value: 'Color', label: 'Color' },
+                            { value: 'Material', label: 'Material' },
+                          ]}
+                        />
+                      </div>
 
                       <input
                         type="text"
@@ -681,7 +659,7 @@ function AddProductFormDialog({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Base Stock</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Base Available Stock</label>
                     <input
                       type="number"
                       min="0"
@@ -728,13 +706,13 @@ function AddProductFormDialog({
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase font-bold text-slate-600">
-                      <th className="py-3 px-3">Variant Name *</th>
+                      <th className="py-3 px-3">Variant / Measure *</th>
                       <th className="py-3 px-3">SKU *</th>
                       <th className="py-3 px-2 text-right">Cost ($)</th>
                       <th className="py-3 px-2 text-right">MRP ($)</th>
                       <th className="py-3 px-2 text-right">Selling Price ($) *</th>
                       <th className="py-3 px-2 text-center">Discount %</th>
-                      <th className="py-3 px-2 text-center">Stock *</th>
+                      <th className="py-3 px-2 text-center">Available Stock *</th>
                       <th className="py-3 px-2 text-center">Alert &lt;</th>
                       <th className="py-3 px-3">Barcode</th>
                       <th className="py-3 px-2 text-center">Action</th>
@@ -760,7 +738,7 @@ function AddProductFormDialog({
                             <input
                               type="text"
                               value={v.name}
-                              placeholder="e.g. Medium, 500ml"
+                              placeholder="e.g. 250g, 1kg, Small"
                               onChange={(e) => handleUpdateVariant(vIdx, 'name', e.target.value)}
                               className={`w-32 sm:w-36 px-2.5 py-1.5 bg-slate-50 border rounded-lg text-xs font-semibold focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#159A1D] ${
                                 nameError ? 'border-red-400 bg-red-50/20' : 'border-slate-200'
@@ -908,8 +886,8 @@ function AddProductFormDialog({
                     <strong className="text-slate-800">{variants.length}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">Combined Stock: </span>
-                    <strong className="text-slate-800">{totalStock} {unit}</strong>
+                    <span className="text-slate-400">Combined Available Stock: </span>
+                    <strong className="text-slate-800">{totalStock} available</strong>
                   </div>
                   <div>
                     <span className="text-slate-400">Selling Price Range: </span>
@@ -927,8 +905,8 @@ function AddProductFormDialog({
               </div>
             </div>
 
-            {/* Navigation back and submit buttons */}
-            <div className="flex items-center justify-between pt-2">
+            {/* Navigation back to General Info */}
+            <div className="flex items-center justify-start pt-2">
               <button
                 type="button"
                 onClick={() => setActiveTab('general')}
@@ -936,14 +914,6 @@ function AddProductFormDialog({
               >
                 <ArrowLeft size={14} />
                 <span>Back to General Info</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSubmit()}
-                className="px-6 py-2.5 bg-[#159A1D] hover:bg-[#128218] text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
-              >
-                {productToEdit ? 'Save Changes' : 'Create Product'}
               </button>
             </div>
           </div>

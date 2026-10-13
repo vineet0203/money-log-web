@@ -44,7 +44,7 @@ export default function PosProductsManager() {
         {/* Tab Content Panels */}
         <div>
           {activeTab === 'All Products' && (
-            <AllProductsTab onOpenImportExport={() => setActiveTab('Import / Export')} />
+            <AllProductsTab />
           )}
           {activeTab === 'Categories' && <CategoriesTab />}
           {activeTab === 'Brands' && <BrandsTab />}

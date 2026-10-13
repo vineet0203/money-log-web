@@ -5,7 +5,7 @@ import { useProducts } from './ProductsContext';
 import { Category } from './types';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
-import { PosSearchInput, PosStatusBadge } from '@/components/pos/common';
+import { PosSearchInput, PosStatusBadge, Select } from '@/components/pos/common';
 import { Plus, Edit, Trash2, FolderPlus, Tag } from 'lucide-react';
 
 export function CategoriesTab() {
@@ -41,14 +41,21 @@ export function CategoriesTab() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
-    if (!name.trim()) return;
-    if (categoryToEdit) {
-      updateCategory(categoryToEdit.id, { name: name.trim(), description: description.trim(), status });
-    } else {
-      addCategory({ name: name.trim(), description: description.trim(), status });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      if (categoryToEdit) {
+        await updateCategory(categoryToEdit.id, { name: name.trim(), description: description.trim(), status });
+      } else {
+        await addCategory({ name: name.trim(), description: description.trim(), status });
+      }
+      setIsModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -171,17 +178,15 @@ export function CategoriesTab() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive')}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
+          <Select
+            label="Status"
+            value={status}
+            onChange={(val) => setStatus(val as 'Active' | 'Inactive')}
+            options={[
+              { value: 'Active', label: 'Active' },
+              { value: 'Inactive', label: 'Inactive' },
+            ]}
+          />
         </div>
       </Modal>
     </div>

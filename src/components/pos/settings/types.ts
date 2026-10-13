@@ -1,6 +1,12 @@
 export type PaperWidth = '80mm' | '58mm' | 'A4';
 export type QrCodeType = 'auto' | 'custom';
 
+export interface PosTaxRate {
+  id: string;
+  name: string;
+  percentage: number;
+}
+
 export interface PosReceiptSettings {
   // Store Identity & Branding
   storeName: string;
@@ -18,6 +24,12 @@ export interface PosReceiptSettings {
   email: string;
   website: string;
   gstTaxNumber: string;
+
+  // Taxation & Currency Configuration
+  currencySymbol: string;
+  currencyCode: string;
+  taxes: PosTaxRate[];
+  isTaxInclusive: boolean;
 
   // UPI Payments & QR
   upiId: string;
@@ -37,11 +49,13 @@ export interface PosReceiptSettings {
   showCustomerInfo: boolean;
   showUpiQrOnReceipt: boolean;
   autoPrintReceipt: boolean;
+  cashDrawerFloat?: number;
 }
 
 export interface PosGeneralSettings {
   currencySymbol: string;
   currencyCode: string;
+  taxes: PosTaxRate[];
   defaultTaxRate: number;
   isTaxInclusive: boolean;
   enableCash: boolean;
@@ -50,6 +64,10 @@ export interface PosGeneralSettings {
   registerName: string;
   cashDrawerFloat: number;
 }
+
+export const DEFAULT_TAX_RATES: PosTaxRate[] = [
+  { id: 'tax-1', name: 'Sales Tax', percentage: 8.0 }
+];
 
 export const DEFAULT_RECEIPT_SETTINGS: PosReceiptSettings = {
   storeName: 'MONEY LOG POS',
@@ -65,6 +83,12 @@ export const DEFAULT_RECEIPT_SETTINGS: PosReceiptSettings = {
   email: 'store@moneylogpos.com',
   website: 'www.moneylogpos.com',
   gstTaxNumber: 'US-WA-8839210',
+  currencySymbol: '$',
+  currencyCode: 'USD',
+  taxes: [
+    { id: 'tax-1', name: 'Sales Tax', percentage: 8.0 }
+  ],
+  isTaxInclusive: false,
   upiId: 'moneylogpos@okaxis',
   upiPayeeName: 'MoneyLog Retail Store',
   upiQrType: 'auto',
@@ -83,6 +107,9 @@ export const DEFAULT_RECEIPT_SETTINGS: PosReceiptSettings = {
 export const DEFAULT_GENERAL_SETTINGS: PosGeneralSettings = {
   currencySymbol: '$',
   currencyCode: 'USD',
+  taxes: [
+    { id: 'tax-1', name: 'Sales Tax', percentage: 8.0 }
+  ],
   defaultTaxRate: 8.0,
   isTaxInclusive: false,
   enableCash: true,

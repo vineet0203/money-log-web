@@ -44,9 +44,15 @@ export function ReceiptPreview({
     ? subtotal 
     : sampleItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
   
+  const taxes = settings.taxes && settings.taxes.length > 0
+    ? settings.taxes
+    : [{ id: '1', name: 'Sales Tax', percentage: 8.0 }];
+  const totalTaxRate = taxes.reduce((sum, t) => sum + (Number(t.percentage) || 0), 0);
+  const currencySymbol = settings.currencySymbol || '$';
+
   const calculatedTax = tax !== undefined 
     ? tax 
-    : calculatedSubtotal * 0.08;
+    : (calculatedSubtotal * totalTaxRate) / 100;
     
   const calculatedTotal = total !== undefined 
     ? total 
@@ -216,11 +222,11 @@ export function ReceiptPreview({
                 <div className="col-span-1 text-slate-400">{idx + 1}</div>
                 <div className="col-span-6">
                   <p className="font-medium leading-tight text-slate-800">{item.name}</p>
-                  <p className="text-[9px] text-slate-400">@ ${item.price.toFixed(2)}</p>
+                  <p className="text-[9px] text-slate-400">@ {currencySymbol}{item.price.toFixed(2)}</p>
                 </div>
                 <div className="col-span-2 text-center text-slate-700">{item.qty}</div>
                 <div className="col-span-3 text-right font-semibold text-slate-900">
-                  ${(item.price * item.qty).toFixed(2)}
+                  {currencySymbol}{(item.price * item.qty).toFixed(2)}
                 </div>
               </div>
             ))}
@@ -231,18 +237,25 @@ export function ReceiptPreview({
         <div className="border-t border-dashed border-slate-300 pt-2 mb-3 space-y-1 text-[10.5px]">
           <div className="flex justify-between text-slate-600">
             <span>Subtotal:</span>
-            <span>${calculatedSubtotal.toFixed(2)}</span>
+            <span>{currencySymbol}{calculatedSubtotal.toFixed(2)}</span>
           </div>
           {settings.showTaxBreakdown && (
-            <div className="flex justify-between text-slate-600">
-              <span>Estimated Tax (8%):</span>
-              <span>${calculatedTax.toFixed(2)}</span>
-            </div>
+            <>
+              {taxes.map((t) => {
+                const taxAmount = (calculatedSubtotal * (Number(t.percentage) || 0)) / 100;
+                return (
+                  <div key={t.id} className="flex justify-between text-slate-600">
+                    <span>{t.name || 'Tax'} ({t.percentage}%):</span>
+                    <span>{currencySymbol}{taxAmount.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+            </>
           )}
           <div className="flex justify-between text-[13px] font-bold text-slate-900 pt-1 border-t border-slate-300">
             <span>TOTAL AMOUNT:</span>
             <span className="text-[14px] text-[#001c38] font-bold">
-              ${calculatedTotal.toFixed(2)}
+              {currencySymbol}{calculatedTotal.toFixed(2)}
             </span>
           </div>
         </div>

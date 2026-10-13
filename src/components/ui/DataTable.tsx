@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Select } from './Select';
 
 export interface Column<T> {
   key: string;
@@ -22,11 +23,15 @@ export interface DataTableProps<T> {
     itemsPerPage: number;
     itemName?: string;
     onPageChange: (page: number) => void;
+    itemsPerPageOptions?: number[];
+    onItemsPerPageChange?: (itemsPerPage: number) => void;
   };
   enableSelection?: boolean;
   selectedRowIds?: (string | number)[];
   onSelectionChange?: (selectedIds: any[]) => void;
   idKey?: string;
+  expandedRowIds?: (string | number)[];
+  renderExpandedRow?: (row: T) => React.ReactNode;
 }
 
 export function DataTable<T>({
@@ -40,6 +45,8 @@ export function DataTable<T>({
   selectedRowIds = [],
   onSelectionChange,
   idKey = 'id',
+  expandedRowIds = [],
+  renderExpandedRow,
 }: DataTableProps<T>) {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,7 +130,7 @@ export function DataTable<T>({
                       );
                     } else if (col.key === 'status' || col.header === 'Status') {
                       skeletonContent = <div className="h-6 bg-slate-200 rounded-md w-16"></div>;
-                    } else if (col.key === 'action' || col.header === 'Action') {
+                    } else if (col.key === 'action' || col.header === 'Action' || col.key === 'actions' || col.header === 'Actions') {
                       skeletonContent = <div className="w-8 h-8 bg-slate-200 rounded-lg"></div>;
                     } else {
                       skeletonContent = <div className="h-4 bg-slate-200 rounded w-full max-w-[80%]"></div>;
@@ -186,29 +193,38 @@ export function DataTable<T>({
               data.map((row, rowIndex) => {
                 const rowId = (row as any)[idKey];
                 const isSelected = selectedRowIds.includes(rowId);
+                const isExpanded = expandedRowIds.includes(rowId);
                 
                 return (
-                  <tr 
-                    key={rowIndex} 
-                    onClick={() => onRowClick && onRowClick(row)}
-                    className={`border-b border-slate-50 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50/80' : 'hover:bg-slate-50/50'} ${isSelected ? 'bg-green-50/30' : ''}`}
-                  >
-                    {enableSelection && (
-                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-slate-300 text-[#159A1D] focus:ring-[#159A1D]"
-                          checked={isSelected}
-                          onChange={(e) => handleSelectRow(e, rowId)}
-                        />
-                      </td>
+                  <React.Fragment key={rowId ?? rowIndex}>
+                    <tr 
+                      onClick={() => onRowClick && onRowClick(row)}
+                      className={`border-b border-slate-50 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-slate-50/80' : 'hover:bg-slate-50/50'} ${isSelected ? 'bg-green-50/30' : ''}`}
+                    >
+                      {enableSelection && (
+                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-slate-300 text-[#159A1D] focus:ring-[#159A1D]"
+                            checked={isSelected}
+                            onChange={(e) => handleSelectRow(e, rowId)}
+                          />
+                        </td>
+                      )}
+                      {columns.map((col, colIndex) => (
+                        <td key={colIndex} className={`px-6 py-4 whitespace-nowrap text-slate-600 ${col.className || ''}`}>
+                          {col.render ? col.render(row) : col.cell ? col.cell(row) : (row as any)[col.key]}
+                        </td>
+                      ))}
+                    </tr>
+                    {isExpanded && renderExpandedRow && (
+                      <tr className="bg-slate-50/30 border-b border-slate-100">
+                        <td colSpan={columns.length + (enableSelection ? 1 : 0)} className="p-0">
+                          {renderExpandedRow(row)}
+                        </td>
+                      </tr>
                     )}
-                    {columns.map((col, colIndex) => (
-                    <td key={colIndex} className={`px-6 py-4 whitespace-nowrap text-slate-600 ${col.className || ''}`}>
-                      {col.render ? col.render(row) : col.cell ? col.cell(row) : (row as any)[col.key]}
-                    </td>
-                  ))}
-                  </tr>
+                  </React.Fragment>
                 );
               })
             )}
@@ -240,52 +256,85 @@ export function DataTable<T>({
         }
 
         return (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
-            <span className="text-sm text-[#849AB4] font-medium">
-              Showing {startItem} to {endItem} of {pagination.totalItems} {itemName}
-            </span>
-            <div className="flex items-center">
-              <button
-                onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-                className="p-1.5 text-[#849AB4] hover:text-slate-700 hover:bg-slate-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              
-              <div className="flex items-center gap-1 mx-0.5">
-                {pageNumbers.map((page, index) => {
-                if (page === '...') {
-                  return (
-                    <span key={`ellipsis-${index}`} className="px-1 text-slate-400 font-bold">
-                      ...
-                    </span>
-                  );
-                }
+          <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3.5 border-t border-slate-100 bg-slate-50/50">
+            <div className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-800">{startItem}</span> to{' '}
+              <span className="font-bold text-slate-800">{endItem}</span> of{' '}
+              <span className="font-bold text-slate-800">{pagination.totalItems}</span> {itemName}
+            </div>
+            <div className="flex items-center gap-3">
+              {pagination.itemsPerPageOptions && pagination.onItemsPerPageChange && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                  <span>Rows per page:</span>
+                  <div className="w-[78px]">
+                    <Select
+                      size="sm"
+                      placement="top"
+                      dropdownClassName="min-w-[78px] w-[78px] right-0"
+                      value={pagination.itemsPerPage}
+                      onChange={(val) => pagination.onItemsPerPageChange?.(Number(val))}
+                      options={pagination.itemsPerPageOptions.map((opt) => ({
+                        value: opt,
+                        label: String(opt),
+                      }))}
+                    />
+                  </div>
+                </div>
+              )}
 
-                return (
-                  <button
-                    key={page}
-                    onClick={() => pagination.onPageChange(page as number)}
-                    className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                      pagination.currentPage === page 
-                        ? 'bg-[#159A1D] text-white' 
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
+              {pagination.itemsPerPageOptions && pagination.onItemsPerPageChange && (
+                <div className="h-4 w-px bg-slate-200 hidden sm:block mx-0.5" />
+              )}
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition-colors shadow-2xs"
+                  title="Previous page"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                
+                <div className="flex items-center gap-1 mx-0.5">
+                  {pageNumbers.map((page, index) => {
+                    if (page === '...') {
+                      return (
+                        <span key={`ellipsis-${index}`} className="w-8 h-8 flex items-center justify-center text-slate-400 text-xs font-bold">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const isCurrent = pagination.currentPage === page;
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => pagination.onPageChange(page as number)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-all ${
+                          isCurrent 
+                            ? 'bg-[#159A1D] text-white font-bold shadow-xs' 
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === pagination.totalPages}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition-colors shadow-2xs"
+                  title="Next page"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-
-              <button
-                onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className="p-1.5 text-[#849AB4] hover:text-slate-700 hover:bg-slate-50 rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-              >
-                <ChevronRight size={18} />
-              </button>
             </div>
           </div>
         );

@@ -17,7 +17,7 @@ export const productFormSchema = z.object({
   name: z.string().trim().min(1, 'Product name is required'),
   category: z.string().trim().min(1, 'Category is required'),
   brand: z.string().trim().min(1, 'Brand is required'),
-  unit: z.string().trim().min(1, 'Unit of measure is required'),
+  unit: z.string().trim().default('pcs').optional(),
   status: z.enum(['Active', 'Draft', 'Out of Stock']),
   description: z.string().trim().optional(),
   variants: z
