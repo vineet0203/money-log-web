@@ -15,6 +15,7 @@ import {
   Tag, 
   FileText
 } from 'lucide-react';
+import { Select } from '@/components/pos/common';
 
 interface AddSupplierModalProps {
   isOpen: boolean;
@@ -340,29 +341,25 @@ function AddSupplierFormDialog({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Default Payment Terms</label>
-              <select
+            <div>
+              <Select
+                label="Default Payment Terms"
                 value={paymentTerms}
-                onChange={e => setPaymentTerms(e.target.value as PaymentTerm)}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-              >
-                {PAYMENT_TERMS_OPTIONS.map(term => (
-                  <option key={term} value={term}>{term}</option>
-                ))}
-              </select>
+                onChange={val => setPaymentTerms(val as PaymentTerm)}
+                options={PAYMENT_TERMS_OPTIONS.map(term => ({ value: term, label: term }))}
+              />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Status</label>
-              <select
+            <div>
+              <Select
+                label="Status"
                 value={status}
-                onChange={e => setStatus(e.target.value as 'Active' | 'Inactive')}
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-              >
-                <option value="Active">Active Vendor</option>
-                <option value="Inactive">Inactive / Suspended</option>
-              </select>
+                onChange={val => setStatus(val as 'Active' | 'Inactive')}
+                options={[
+                  { value: 'Active', label: 'Active Vendor' },
+                  { value: 'Inactive', label: 'Inactive / Suspended' }
+                ]}
+              />
             </div>
           </div>
         </div>

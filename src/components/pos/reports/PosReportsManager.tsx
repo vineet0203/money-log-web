@@ -10,7 +10,6 @@ import { ProfitMarginsReport } from './ProfitMarginsReport';
 import { InventoryValuationReport } from './InventoryValuationReport';
 import { PaymentSummaryReport } from './PaymentSummaryReport';
 import { ReturnsRefundsReport } from './ReturnsRefundsReport';
-import { CashierRegisterReport } from './CashierRegisterReport';
 import { PurchaseReport } from './PurchaseReport';
 import { 
   BarChart3, 
@@ -20,7 +19,6 @@ import {
   Layers, 
   CreditCard, 
   RotateCcw, 
-  UserCheck, 
   Truck,
   Calendar,
   Printer
@@ -41,10 +39,13 @@ export default function PosReportsManager() {
   const { setHeaderData } = useAppData();
   const [activeTab, setActiveTab] = useState<ReportTab>('sales_summary');
   const [dateRange, setDateRange] = useState<DateRangePreset>('30days');
-  const [selectedRegister, setSelectedRegister] = useState('All');
 
   useEffect(() => {
-    setHeaderData("POS Reports", "Executive insights on sales, margins, inventory valuation, cash registers, and purchases.", false);
+    setHeaderData(
+      "POS Reports", 
+      "Executive insights on sales, profit margins, product velocity, inventory valuation, and purchases.", 
+      false
+    );
   }, [setHeaderData]);
 
   const reportTabs: Array<{ id: ReportTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = [
@@ -55,7 +56,6 @@ export default function PosReportsManager() {
     { id: 'inventory_valuation', label: 'Inventory Valuation', icon: Layers },
     { id: 'payment_summary', label: 'Payment Summary', icon: CreditCard },
     { id: 'returns_refunds', label: 'Returns & Refunds', icon: RotateCcw },
-    { id: 'cashier_register', label: 'Cashier / Register', icon: UserCheck },
     { id: 'purchase_report', label: 'Purchase Report', icon: Truck },
   ];
 
@@ -87,18 +87,8 @@ export default function PosReportsManager() {
           </div>
         </div>
 
-        {/* Register Filter & Print Action */}
+        {/* Print Action */}
         <div className="flex items-center gap-2.5">
-          <select
-            value={selectedRegister}
-            onChange={(e) => setSelectedRegister(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#159A1D]"
-          >
-            <option value="All">All Registers / Terminals</option>
-            <option value="#01">Terminal #01 (Main Counter)</option>
-            <option value="#02">Terminal #02 (Express & Drive-thru)</option>
-          </select>
-
           <Button
             variant="outline"
             size="sm"
@@ -121,15 +111,14 @@ export default function PosReportsManager() {
 
       {/* Tab Panels */}
       <div>
-        {activeTab === 'sales_summary' && <SalesSummaryReport />}
-        {activeTab === 'product_sales' && <ProductWiseReport />}
-        {activeTab === 'category_sales' && <CategoryWiseReport />}
-        {activeTab === 'profit_margins' && <ProfitMarginsReport />}
+        {activeTab === 'sales_summary' && <SalesSummaryReport dateRange={dateRange} />}
+        {activeTab === 'product_sales' && <ProductWiseReport dateRange={dateRange} />}
+        {activeTab === 'category_sales' && <CategoryWiseReport dateRange={dateRange} />}
+        {activeTab === 'profit_margins' && <ProfitMarginsReport dateRange={dateRange} />}
         {activeTab === 'inventory_valuation' && <InventoryValuationReport />}
-        {activeTab === 'payment_summary' && <PaymentSummaryReport />}
-        {activeTab === 'returns_refunds' && <ReturnsRefundsReport />}
-        {activeTab === 'cashier_register' && <CashierRegisterReport />}
-        {activeTab === 'purchase_report' && <PurchaseReport />}
+        {activeTab === 'payment_summary' && <PaymentSummaryReport dateRange={dateRange} />}
+        {activeTab === 'returns_refunds' && <ReturnsRefundsReport dateRange={dateRange} />}
+        {activeTab === 'purchase_report' && <PurchaseReport dateRange={dateRange} />}
       </div>
     </div>
   );

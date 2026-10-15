@@ -1,13 +1,32 @@
 "use client";
 
 import React from 'react';
-import { MOCK_PURCHASE_REPORT, exportTableToCsv } from './reportsData';
+import { exportTableToCsv } from './reportsData';
+import { DateRangePreset } from './types';
+import { usePurchaseReportQuery } from '@/hooks/queries/posReports';
 import { Download, Truck, Clock, CheckCircle, FileText } from 'lucide-react';
 import { PosStatCard, PosStatusBadge } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
 
-export function PurchaseReport() {
-  const data = MOCK_PURCHASE_REPORT;
+interface PurchaseReportProps {
+  dateRange?: DateRangePreset;
+}
+
+export function PurchaseReport({ dateRange = '30days' }: PurchaseReportProps) {
+  const { data: reportData, isLoading } = usePurchaseReportQuery(dateRange);
+
+  const data = reportData || {
+    totalPurchases: 0,
+    totalSpend: 0,
+    completedPOs: 0,
+    pendingPOs: 0,
+    supplierSpend: [],
+    recentPurchases: [],
+  };
+
+  const avgFulfillment = data.supplierSpend.length > 0 
+    ? (data.supplierSpend.reduce((sum, s) => sum + s.fulfillmentRate, 0) / data.supplierSpend.length).toFixed(1)
+    : '100.0';
 
   const handleExport = () => {
     const headers = ['PO Number', 'Supplier', 'Date', 'Items Count', 'Total Cost ($)', 'Delivery Status', 'Payment Status'];
@@ -45,7 +64,7 @@ export function PurchaseReport() {
 
         <PosStatCard
           title="Avg Supplier Fulfillment"
-          value="96.8%"
+          value={`${avgFulfillment}%`}
           subtitle="On-time and in-full delivery rate"
           icon={CheckCircle}
           color="green"
@@ -67,30 +86,36 @@ export function PurchaseReport() {
           <p className="text-xs text-slate-400 mt-0.5">Purchasing spend, PO count, and fulfillment reliability per vendor.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.supplierSpend.map(sup => (
-            <div key={sup.supplier} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-              <div className="flex items-center justify-between">
-                <h5 className="font-bold text-slate-900 text-xs">{sup.supplier}</h5>
-                <span className="text-[11px] font-bold px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-700">
-                  {sup.poCount} POs
-                </span>
+        {data.supplierSpend.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl">
+            No supplier purchases recorded for this date range.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.supplierSpend.map(sup => (
+              <div key={sup.supplier} className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h5 className="font-bold text-slate-900 text-xs">{sup.supplier}</h5>
+                  <span className="text-[11px] font-bold px-2 py-0.5 bg-white rounded border border-slate-200 text-slate-700">
+                    {sup.poCount} POs
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs text-slate-500">Total Spend:</span>
+                  <strong className="text-base font-bold text-slate-900">${sup.totalSpend.toLocaleString()}</strong>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 text-slate-500">
+                  <span>Fulfillment: <strong className="text-emerald-700">{sup.fulfillmentRate}%</strong></span>
+                  {sup.pendingAmount > 0 ? (
+                    <span className="text-amber-700 font-semibold">Due: ${sup.pendingAmount.toFixed(2)}</span>
+                  ) : (
+                    <span className="text-emerald-700 font-semibold">Fully Paid</span>
+                  )}
+                </div>
               </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs text-slate-500">Total Spend:</span>
-                <strong className="text-base font-bold text-slate-900">${sup.totalSpend.toLocaleString()}</strong>
-              </div>
-              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200 text-slate-500">
-                <span>Fulfillment: <strong className="text-emerald-700">{sup.fulfillmentRate}%</strong></span>
-                {sup.pendingAmount > 0 ? (
-                  <span className="text-amber-700 font-semibold">Due: ${sup.pendingAmount.toFixed(2)}</span>
-                ) : (
-                  <span className="text-emerald-700 font-semibold">Fully Paid</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent Purchases Table */}
@@ -124,21 +149,29 @@ export function PurchaseReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.recentPurchases.map((po) => (
-                <tr key={po.poNumber} className="hover:bg-slate-50/70">
-                  <td className="py-3.5 px-5 font-mono font-bold text-slate-900">{po.poNumber}</td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-800">{po.supplier}</td>
-                  <td className="py-3.5 px-3 text-slate-500 font-medium">{po.date}</td>
-                  <td className="py-3.5 px-3 text-center font-bold text-slate-700">{po.itemsCount} units</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-slate-900">${po.totalCost.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-center">
-                    <PosStatusBadge status={po.status} />
-                  </td>
-                  <td className="py-3.5 px-5 text-center">
-                    <PosStatusBadge status={po.paymentStatus} />
+              {data.recentPurchases.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    No purchase orders recorded for this date range.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                data.recentPurchases.map((po) => (
+                  <tr key={po.poNumber} className="hover:bg-slate-50/70">
+                    <td className="py-3.5 px-5 font-mono font-bold text-slate-900">{po.poNumber}</td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800">{po.supplier}</td>
+                    <td className="py-3.5 px-3 text-slate-500 font-medium">{po.date}</td>
+                    <td className="py-3.5 px-3 text-center font-bold text-slate-700">{po.itemsCount} units</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-slate-900">${po.totalCost.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-center">
+                      <PosStatusBadge status={po.status} />
+                    </td>
+                    <td className="py-3.5 px-5 text-center">
+                      <PosStatusBadge status={po.paymentStatus} />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -10,20 +10,34 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { MOCK_PRODUCT_SALES, exportTableToCsv } from './reportsData';
-import { Download, ArrowUpDown } from 'lucide-react';
-import { PosSearchInput } from '@/components/pos/common';
+import { exportTableToCsv } from './reportsData';
+import { DateRangePreset } from './types';
+import { useProductSalesReportQuery } from '@/hooks/queries/posReports';
+import { Download, ArrowUpDown, Loader2 } from 'lucide-react';
+import { PosSearchInput, Select } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
 
-export function ProductWiseReport() {
+interface ProductWiseReportProps {
+  dateRange?: DateRangePreset;
+}
+
+export function ProductWiseReport({ dateRange = '30days' }: ProductWiseReportProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState<'revenue' | 'units' | 'margin'>('revenue');
 
-  const categories = ['All', 'Coffee', 'Dairy & Milks', 'Equipment', 'Syrups & Flavors', 'Accessories'];
+  const { data: rawItems = [], isLoading } = useProductSalesReportQuery(dateRange, selectedCategory);
+
+  const categories = useMemo(() => {
+    const set = new Set<string>(['All']);
+    rawItems.forEach(p => {
+      if (p.category) set.add(p.category);
+    });
+    return Array.from(set);
+  }, [rawItems]);
 
   const filteredItems = useMemo(() => {
-    return MOCK_PRODUCT_SALES.filter(p => {
+    return rawItems.filter(p => {
       const matchesSearch = !searchTerm || 
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.sku.toLowerCase().includes(searchTerm.toLowerCase());
@@ -34,10 +48,10 @@ export function ProductWiseReport() {
       if (sortBy === 'units') return b.unitsSold - a.unitsSold;
       return b.marginPercent - a.marginPercent;
     });
-  }, [searchTerm, selectedCategory, sortBy]);
+  }, [rawItems, searchTerm, selectedCategory, sortBy]);
 
   const top5ChartData = useMemo(() => {
-    return [...MOCK_PRODUCT_SALES]
+    return [...rawItems]
       .sort((a, b) => b.netRevenue - a.netRevenue)
       .slice(0, 5)
       .map(p => ({
@@ -45,7 +59,7 @@ export function ProductWiseReport() {
         revenue: p.netRevenue,
         profit: p.grossProfit,
       }));
-  }, []);
+  }, [rawItems]);
 
   const handleExport = () => {
     const headers = ['Product Name', 'SKU', 'Category', 'Units Sold', 'Gross Sales ($)', 'Discount ($)', 'Net Revenue ($)', 'COGS ($)', 'Gross Profit ($)', 'Margin %'];
@@ -114,15 +128,13 @@ export function ProductWiseReport() {
             />
 
             {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#159A1D]"
-            >
-              {categories.map(c => (
-                <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>
-              ))}
-            </select>
+            <div className="w-48">
+              <Select
+                value={selectedCategory}
+                onChange={(val) => setSelectedCategory(val)}
+                options={categories.map(c => ({ value: c, label: c === 'All' ? 'All Categories' : c }))}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -180,38 +192,46 @@ export function ProductWiseReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredItems.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-5">
-                    <div className="font-semibold text-slate-900">{item.productName}</div>
-                    <div className="font-mono text-[11px] text-slate-400 mt-0.5">{item.sku}</div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-medium text-[11px]">
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                    {item.unitsSold.toLocaleString()}
-                  </td>
-                  <td className="py-3.5 px-4 text-right text-slate-500">${item.grossSales.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right text-amber-700">-${item.discount.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-slate-900">${item.netRevenue.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right text-slate-500">${item.cogs.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">${item.grossProfit.toFixed(2)}</td>
-                  <td className="py-3.5 px-5 text-center">
-                    <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
-                      item.marginPercent >= 50
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : item.marginPercent >= 35
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200'
-                    }`}>
-                      {item.marginPercent.toFixed(1)}%
-                    </span>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
+                    No product sales matching the selected filters.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map(item => (
+                  <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-5">
+                      <div className="font-semibold text-slate-900">{item.productName}</div>
+                      <div className="font-mono text-[11px] text-slate-400 mt-0.5">{item.sku}</div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-medium text-[11px]">
+                        {item.category}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-bold text-slate-800">
+                      {item.unitsSold.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4 text-right text-slate-500">${item.grossSales.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right text-amber-700">-${item.discount.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-slate-900">${item.netRevenue.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right text-slate-500">${item.cogs.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">${item.grossProfit.toFixed(2)}</td>
+                    <td className="py-3.5 px-5 text-center">
+                      <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
+                        item.marginPercent >= 50
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : item.marginPercent >= 35
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {item.marginPercent.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

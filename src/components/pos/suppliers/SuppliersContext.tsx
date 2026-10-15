@@ -1,17 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import {
   Supplier,
   PurchaseOrder,
   PurchaseBill,
   GoodsReceivingRecord,
   SupplierPayment,
-  INITIAL_SUPPLIERS,
-  INITIAL_PURCHASE_ORDERS,
-  INITIAL_PURCHASE_BILLS,
-  INITIAL_GRN_RECORDS,
-  INITIAL_SUPPLIER_PAYMENTS,
   PurchaseOrderItem,
   GoodsReceivingItem,
   PurchaseOrderStatus,
@@ -22,6 +17,22 @@ import {
   GoodsReceivingFormData, 
   SupplierPaymentFormData 
 } from './schema';
+import {
+  useSuppliersQuery,
+  useCreateSupplierMutation,
+  useUpdateSupplierMutation,
+  useDeleteSupplierMutation,
+  usePurchaseOrdersQuery,
+  useCreatePurchaseOrderMutation,
+  useUpdatePOStatusMutation,
+  usePurchaseBillsQuery,
+  useCreatePurchaseBillMutation,
+  useGoodsReceiptsQuery,
+  useProcessGRNMutation,
+  useSupplierPaymentsQuery,
+  useRecordPaymentMutation,
+  useSupplierMetricsQuery,
+} from '@/hooks/queries/posSuppliers';
 
 interface SuppliersContextType {
   suppliers: Supplier[];
@@ -36,6 +47,7 @@ interface SuppliersContextType {
     totalPurchasesValue: number;
     completedGRNsCount: number;
   };
+  isLoading: boolean;
   addSupplier: (data: SupplierFormData) => Supplier;
   updateSupplier: (id: string, data: Partial<Supplier>) => void;
   deleteSupplier: (id: string) => void;
@@ -49,14 +61,68 @@ interface SuppliersContextType {
 const SuppliersContext = createContext<SuppliersContextType | undefined>(undefined);
 
 export function SuppliersProvider({ children }: { children: ReactNode }) {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(INITIAL_PURCHASE_ORDERS);
-  const [purchases, setPurchases] = useState<PurchaseBill[]>(INITIAL_PURCHASE_BILLS);
-  const [goodsReceivingRecords, setGoodsReceivingRecords] = useState<GoodsReceivingRecord[]>(INITIAL_GRN_RECORDS);
-  const [payments, setPayments] = useState<SupplierPayment[]>(INITIAL_SUPPLIER_PAYMENTS);
+  // Query hooks
+  const { data: dbSuppliers, isLoading: isSuppliersLoading } = useSuppliersQuery();
+  const { data: dbPOs, isLoading: isPOsLoading } = usePurchaseOrdersQuery();
+  const { data: dbBills, isLoading: isBillsLoading } = usePurchaseBillsQuery();
+  const { data: dbGRNs, isLoading: isGRNsLoading } = useGoodsReceiptsQuery();
+  const { data: dbPayments, isLoading: isPaymentsLoading } = useSupplierPaymentsQuery();
+  const { data: dbMetrics, isLoading: isMetricsLoading } = useSupplierMetricsQuery();
 
-  // Compute key summary metrics
+  // Mutations
+  const createSupplierMutation = useCreateSupplierMutation();
+  const updateSupplierMutation = useUpdateSupplierMutation();
+  const deleteSupplierMutation = useDeleteSupplierMutation();
+  const createPOMutation = useCreatePurchaseOrderMutation();
+  const updatePOStatusMutation = useUpdatePOStatusMutation();
+  const createBillMutation = useCreatePurchaseBillMutation();
+  const processGRNMutation = useProcessGRNMutation();
+  const recordPaymentMutation = useRecordPaymentMutation();
+
+  // Real local state initialized empty (no mock data)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [purchases, setPurchases] = useState<PurchaseBill[]>([]);
+  const [goodsReceivingRecords, setGoodsReceivingRecords] = useState<GoodsReceivingRecord[]>([]);
+  const [payments, setPayments] = useState<SupplierPayment[]>([]);
+
+  // Sync from DB queries when available
+  useEffect(() => {
+    if (dbSuppliers !== undefined) {
+      setSuppliers(dbSuppliers);
+    }
+  }, [dbSuppliers]);
+
+  useEffect(() => {
+    if (dbPOs !== undefined) {
+      setPurchaseOrders(dbPOs);
+    }
+  }, [dbPOs]);
+
+  useEffect(() => {
+    if (dbBills !== undefined) {
+      setPurchases(dbBills);
+    }
+  }, [dbBills]);
+
+  useEffect(() => {
+    if (dbGRNs !== undefined) {
+      setGoodsReceivingRecords(dbGRNs);
+    }
+  }, [dbGRNs]);
+
+  useEffect(() => {
+    if (dbPayments !== undefined) {
+      setPayments(dbPayments);
+    }
+  }, [dbPayments]);
+
+  // Compute key summary metrics (prefer DB aggregated metrics if available)
   const metrics = useMemo(() => {
+    if (dbMetrics) {
+      return dbMetrics;
+    }
+
     const totalPayableBalance = suppliers.reduce((sum, s) => sum + s.balancePayable, 0);
     const activeSuppliersCount = suppliers.filter(s => s.status === 'Active').length;
     const openPOsCount = purchaseOrders.filter(po => po.status === 'Draft' || po.status === 'Ordered' || po.status === 'Partial').length;
@@ -70,8 +136,9 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
       totalPurchasesValue,
       completedGRNsCount,
     };
-  }, [suppliers, purchaseOrders, purchases, goodsReceivingRecords]);
+  }, [dbMetrics, suppliers, purchaseOrders, purchases, goodsReceivingRecords]);
 
+  // 1. Add Supplier
   const addSupplier = (data: SupplierFormData): Supplier => {
     const newSupplier: Supplier = {
       id: `sup-${Date.now()}`,
@@ -99,17 +166,46 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
     };
 
     setSuppliers(prev => [newSupplier, ...prev]);
+
+    // Backend mutation in background
+    createSupplierMutation.mutate(data, {
+      onSuccess: (saved) => {
+        if (saved?.id) {
+          setSuppliers(prev => prev.map(s => s.id === newSupplier.id ? { ...s, id: String(saved.id) } : s));
+        }
+      }
+    });
+
     return newSupplier;
   };
 
+  // 2. Update Supplier
   const updateSupplier = (id: string, data: Partial<Supplier>) => {
     setSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+    updateSupplierMutation.mutate({
+      id,
+      data: {
+        name: data.name,
+        code: data.code,
+        contactPerson: data.contactPerson,
+        phone: data.phone,
+        email: data.email,
+        address: data.address,
+        city: data.city,
+        paymentTerms: data.paymentTerms,
+        notes: data.notes,
+        status: data.status,
+      } as Partial<SupplierFormData>
+    });
   };
 
+  // 3. Delete Supplier
   const deleteSupplier = (id: string) => {
     setSuppliers(prev => prev.filter(s => s.id !== id));
+    deleteSupplierMutation.mutate(id);
   };
 
+  // 4. Create Purchase Order
   const createPurchaseOrder = (data: CreatePurchaseFormData): PurchaseOrder => {
     const supplier = suppliers.find(s => s.id === data.supplierId);
     const poNumber = `PO-${new Date().getFullYear()}-${String(purchaseOrders.length + 101).padStart(4, '0')}`;
@@ -161,9 +257,20 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
     };
 
     setPurchaseOrders(prev => [newPO, ...prev]);
+
+    // Backend mutation
+    createPOMutation.mutate(data, {
+      onSuccess: (saved) => {
+        if (saved?.id) {
+          setPurchaseOrders(prev => prev.map(p => p.id === newPO.id ? { ...p, id: String(saved.id), poNumber: saved.poNumber || p.poNumber } : p));
+        }
+      }
+    });
+
     return newPO;
   };
 
+  // 5. Create Purchase Bill (WITH INVENTORY RESTOCKING IN BACKEND)
   const createPurchaseBill = (data: CreatePurchaseFormData): PurchaseBill => {
     const supplier = suppliers.find(s => s.id === data.supplierId);
     const billNumber = `BILL-${new Date().getFullYear()}-${String(purchases.length + 85).padStart(4, '0')}`;
@@ -224,13 +331,29 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
     }
 
     setPurchases(prev => [newBill, ...prev]);
+
+    // Backend mutation: passes isReceived=true so inventory is automatically replenished in MySQL
+    createBillMutation.mutate({
+      ...data,
+      isReceived: true,
+    }, {
+      onSuccess: (saved) => {
+        if (saved?.id) {
+          setPurchases(prev => prev.map(b => b.id === newBill.id ? { ...b, id: String(saved.id), billNumber: saved.billNumber || b.billNumber } : b));
+        }
+      }
+    });
+
     return newBill;
   };
 
+  // 6. Update PO Status
   const updatePOStatus = (id: string, status: PurchaseOrderStatus) => {
     setPurchaseOrders(prev => prev.map(po => po.id === id ? { ...po, status } : po));
+    updatePOStatusMutation.mutate({ id, status });
   };
 
+  // 7. Process Goods Receiving (GRN) - REPLENISHES INVENTORY IN BACKEND
   const processGoodsReceiving = (data: GoodsReceivingFormData): GoodsReceivingRecord => {
     const po = purchaseOrders.find(p => p.poNumber === data.poNumber);
     const grnNumber = `GRN-${new Date().getFullYear()}-${String(goodsReceivingRecords.length + 44).padStart(4, '0')}`;
@@ -312,9 +435,24 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
     }
 
     setGoodsReceivingRecords(prev => [newGRN, ...prev]);
+
+    // Backend mutation: restocks stock_quantity in MySQL
+    processGRNMutation.mutate({
+      ...data,
+      supplierId: po?.supplierId || suppliers[0]?.id || '1',
+      poId: po?.id,
+    } as any, {
+      onSuccess: (saved) => {
+        if (saved?.id) {
+          setGoodsReceivingRecords(prev => prev.map(g => g.id === newGRN.id ? { ...g, id: String(saved.id), grnNumber: saved.grnNumber || g.grnNumber } : g));
+        }
+      }
+    });
+
     return newGRN;
   };
 
+  // 8. Record Supplier Payment
   const recordSupplierPayment = (data: SupplierPaymentFormData): SupplierPayment => {
     const supplier = suppliers.find(s => s.id === data.supplierId);
     const paymentNumber = `PAY-${new Date().getFullYear()}-${String(payments.length + 74).padStart(4, '0')}`;
@@ -375,6 +513,10 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
     }
 
     setPayments(prev => [newPayment, ...prev]);
+
+    // Backend mutation
+    recordPaymentMutation.mutate(data);
+
     return newPayment;
   };
 
@@ -387,6 +529,7 @@ export function SuppliersProvider({ children }: { children: ReactNode }) {
         goodsReceivingRecords,
         payments,
         metrics,
+        isLoading: isSuppliersLoading,
         addSupplier,
         updateSupplier,
         deleteSupplier,

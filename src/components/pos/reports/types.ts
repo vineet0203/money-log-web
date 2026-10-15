@@ -8,7 +8,6 @@ export type ReportTab =
   | 'inventory_valuation'
   | 'payment_summary'
   | 'returns_refunds'
-  | 'cashier_register'
   | 'purchase_report';
 
 export interface SalesSummaryData {

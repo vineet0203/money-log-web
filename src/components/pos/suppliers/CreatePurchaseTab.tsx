@@ -2,10 +2,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { useSuppliers } from './SuppliersContext';
-import { CATALOG_ITEMS, CatalogItemOption, PaymentTerm } from './types';
+import { CatalogItemOption, PaymentTerm } from './types';
+import { useGetPosProducts } from '@/hooks/queries/posProducts';
 import { createPurchaseSchema } from './schema';
 import { 
-  ShoppingBag, 
   Receipt, 
   Building2, 
   Plus, 
@@ -21,6 +21,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/pos/common';
 
 interface CreatePurchaseTabProps {
   initialSupplierId?: string;
@@ -43,10 +44,41 @@ export function CreatePurchaseTab({
   initialSupplierId,
   onSuccessNavigate,
 }: CreatePurchaseTabProps) {
-  const { suppliers, createPurchaseOrder, createPurchaseBill } = useSuppliers();
+  const { suppliers, createPurchaseBill } = useSuppliers();
+  const { data: productsData } = useGetPosProducts({ limit: 100 });
 
-  // Document Type: PO vs Direct Bill
-  const [purchaseType, setPurchaseType] = useState<'PurchaseOrder' | 'DirectBill'>('PurchaseOrder');
+  // Map live catalog products & variants into selectable catalog items
+  const catalogOptions: CatalogItemOption[] = useMemo(() => {
+    if (!productsData?.data || productsData.data.length === 0) {
+      return [];
+    }
+    const list: CatalogItemOption[] = [];
+    productsData.data.forEach(p => {
+      if (Array.isArray(p.variants) && p.variants.length > 0) {
+        p.variants.forEach(v => {
+          list.push({
+            productId: p.id,
+            variantId: v.id ? String(v.id) : undefined,
+            sku: v.sku || `SKU-${v.id}`,
+            name: `${p.name} (${v.title})`,
+            unit: p.base_unit || 'pcs',
+            costPrice: Number(v.cost_price || 0),
+            category: p.category_name || 'General'
+          });
+        });
+      } else {
+        list.push({
+          productId: p.id,
+          sku: `PROD-${p.id}`,
+          name: p.name,
+          unit: p.base_unit || 'pcs',
+          costPrice: 0,
+          category: p.category_name || 'General'
+        });
+      }
+    });
+    return list;
+  }, [productsData]);
 
   // Supplier Selection
   const [supplierId, setSupplierId] = useState<string>(
@@ -74,28 +106,17 @@ export function CreatePurchaseTab({
   const [items, setItems] = useState<EditableLineItem[]>([
     {
       id: 'item-1',
-      productId: CATALOG_ITEMS[0].productId,
-      sku: CATALOG_ITEMS[0].sku,
-      itemName: CATALOG_ITEMS[0].name,
-      unit: CATALOG_ITEMS[0].unit,
-      orderedQty: 25,
-      unitCost: CATALOG_ITEMS[0].costPrice,
-      taxPercent: 5,
-    },
-    {
-      id: 'item-2',
-      productId: CATALOG_ITEMS[4].productId,
-      sku: CATALOG_ITEMS[4].sku,
-      itemName: CATALOG_ITEMS[4].name,
-      unit: CATALOG_ITEMS[4].unit,
-      orderedQty: 100,
-      unitCost: CATALOG_ITEMS[4].costPrice,
-      taxPercent: 5,
+      sku: '',
+      itemName: '',
+      unit: 'pcs',
+      orderedQty: 1,
+      unitCost: 0,
+      taxPercent: 0,
     }
   ]);
 
   // Charges
-  const [shippingFee, setShippingFee] = useState<number>(35);
+  const [shippingFee, setShippingFee] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [notes, setNotes] = useState('');
 
@@ -117,12 +138,13 @@ export function CreatePurchaseTab({
     const nextItem: EditableLineItem = catalogItem ? {
       id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       productId: catalogItem.productId,
+      variantId: catalogItem.variantId,
       sku: catalogItem.sku,
       itemName: catalogItem.name,
       unit: catalogItem.unit,
-      orderedQty: 10,
+      orderedQty: 1,
       unitCost: catalogItem.costPrice,
-      taxPercent: 5,
+      taxPercent: 0,
     } : {
       id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       sku: '',
@@ -130,7 +152,7 @@ export function CreatePurchaseTab({
       unit: 'pcs',
       orderedQty: 1,
       unitCost: 0,
-      taxPercent: 5,
+      taxPercent: 0,
     };
 
     setItems([...items, nextItem]);
@@ -141,15 +163,18 @@ export function CreatePurchaseTab({
   };
 
   const handleSelectCatalogItem = (rowId: string, sku: string) => {
-    const found = CATALOG_ITEMS.find(c => c.sku === sku);
+    const found = catalogOptions.find(c => c.sku === sku);
     if (found) {
       handleUpdateItem(rowId, {
         productId: found.productId,
+        variantId: found.variantId,
         sku: found.sku,
         itemName: found.name,
         unit: found.unit,
         unitCost: found.costPrice,
       });
+    } else {
+      handleUpdateItem(rowId, { sku });
     }
   };
 
@@ -175,18 +200,18 @@ export function CreatePurchaseTab({
     return Math.max(0, subtotal + taxTotal + shippingFee - discount);
   }, [subtotal, taxTotal, shippingFee, discount]);
 
-  // Submit Handler
+  // Submit Handler - Direct Purchase Only
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setSuccessMessage(null);
 
     const formData = {
-      type: purchaseType,
+      type: 'DirectBill' as const,
       supplierId,
       date,
       dueDateOrExpectedDate,
-      supplierInvoiceNo: purchaseType === 'DirectBill' ? supplierInvoiceNo : '',
+      supplierInvoiceNo,
       paymentTerms,
       shippingFee,
       discount,
@@ -208,61 +233,25 @@ export function CreatePurchaseTab({
       return;
     }
 
-    if (purchaseType === 'PurchaseOrder') {
-      const newPO = createPurchaseOrder(validation.data);
-      setSuccessMessage(`Purchase Order #${newPO.poNumber} successfully issued to ${newPO.supplierName}!`);
-      setTimeout(() => {
-        if (onSuccessNavigate) onSuccessNavigate('Purchase Orders');
-      }, 1200);
-    } else {
-      const newBill = createPurchaseBill(validation.data);
-      setSuccessMessage(`Purchase Bill #${newBill.billNumber} successfully recorded with balance due of $${newBill.balanceDue.toFixed(2)}.`);
-      setTimeout(() => {
-        if (onSuccessNavigate) onSuccessNavigate('All Purchases');
-      }, 1200);
-    }
+    const newBill = createPurchaseBill(validation.data);
+    setSuccessMessage(`Purchase Bill #${newBill.billNumber} successfully recorded with balance due of $${newBill.balanceDue.toFixed(2)}. Inventory stock updated.`);
+    setTimeout(() => {
+      if (onSuccessNavigate) onSuccessNavigate('All Purchases');
+    }, 1200);
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Mode Toggle */}
+      {/* Top Banner */}
       <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <ShoppingBag size={18} className="text-[#159A1D]" />
-            Procurement & Purchase Generator
+            <Receipt size={18} className="text-[#159A1D]" />
+            Direct Purchase Bill Entry
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Issue vendor purchase orders or log incoming direct vendor supplier invoices.
+            Record incoming vendor purchase bills, replenish store inventory in real-time, and update trade payables.
           </p>
-        </div>
-
-        {/* Type Toggle Pills */}
-        <div className="inline-flex bg-slate-100 p-1 rounded-xl self-start md:self-auto border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setPurchaseType('PurchaseOrder')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              purchaseType === 'PurchaseOrder'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShoppingBag size={14} className={purchaseType === 'PurchaseOrder' ? 'text-[#159A1D]' : 'text-slate-400'} />
-            Issue Purchase Order (PO)
-          </button>
-          <button
-            type="button"
-            onClick={() => setPurchaseType('DirectBill')}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              purchaseType === 'DirectBill'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Receipt size={14} className={purchaseType === 'DirectBill' ? 'text-[#159A1D]' : 'text-slate-400'} />
-            Record Direct Purchase Bill
-          </button>
         </div>
       </div>
 
@@ -294,80 +283,78 @@ export function CreatePurchaseTab({
         <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
             <Building2 size={14} className="text-[#159A1D]" />
-            Vendor & Order Logistics
+            Vendor & Invoice Logistics
           </h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">
-                Supplier / Vendor <span className="text-rose-500">*</span>
-              </label>
-              <select
+            <div>
+              <Select
+                label="Supplier / Vendor"
+                required
                 value={supplierId}
-                onChange={e => handleSupplierChange(e.target.value)}
-                className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-              >
-                {suppliers.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.code})
-                  </option>
-                ))}
-              </select>
+                onChange={handleSupplierChange}
+                options={suppliers.map(s => ({
+                  value: s.id,
+                  label: `${s.name} (${s.code})`
+                }))}
+                placeholder={suppliers.length === 0 ? "No suppliers registered" : "Select supplier..."}
+              />
+              {errors.supplierId && (
+                <p className="text-[11px] text-rose-600 mt-1 font-medium">{errors.supplierId}</p>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">
-                {purchaseType === 'PurchaseOrder' ? 'Order Date' : 'Bill Date'} <span className="text-rose-500">*</span>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                Bill Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
+                className="w-full px-3.5 py-2.5 text-sm font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">
-                {purchaseType === 'PurchaseOrder' ? 'Expected Delivery' : 'Payment Due Date'} <span className="text-rose-500">*</span>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                Payment Due Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={dueDateOrExpectedDate}
                 onChange={e => setDueDateOrExpectedDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
+                className="w-full px-3.5 py-2.5 text-sm font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
               />
             </div>
 
-            {purchaseType === 'DirectBill' ? (
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">
-                  Supplier Invoice #
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. INV-OR-908"
-                  value={supplierInvoiceNo}
-                  onChange={e => setSupplierInvoiceNo(e.target.value)}
-                  className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
-                />
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Payment Terms</label>
-                <select
-                  value={paymentTerms}
-                  onChange={e => setPaymentTerms(e.target.value as PaymentTerm)}
-                  className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-                >
-                  <option value="Due on Receipt">Due on Receipt</option>
-                  <option value="Net 15">Net 15</option>
-                  <option value="Net 30">Net 30</option>
-                  <option value="Net 60">Net 60</option>
-                  <option value="Cash on Delivery">Cash on Delivery</option>
-                </select>
-              </div>
-            )}
+            <div>
+              <Select
+                label="Payment Terms"
+                value={paymentTerms}
+                onChange={val => setPaymentTerms(val as PaymentTerm)}
+                options={[
+                  { value: 'Due on Receipt', label: 'Due on Receipt' },
+                  { value: 'Net 15', label: 'Net 15' },
+                  { value: 'Net 30', label: 'Net 30' },
+                  { value: 'Net 60', label: 'Net 60' },
+                  { value: 'Cash on Delivery', label: 'Cash on Delivery' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="max-w-xs">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Supplier Invoice #
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. INV-OR-908"
+              value={supplierInvoiceNo}
+              onChange={e => setSupplierInvoiceNo(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-sm font-medium rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
+            />
           </div>
 
           {/* Quick Supplier Info Banner */}
@@ -408,40 +395,42 @@ export function CreatePurchaseTab({
                 className="gap-1.5"
               >
                 <Plus size={14} />
-                Add Custom Row
+                Add Item Row
               </Button>
             </div>
           </div>
 
           {/* Catalog Quick Add Chips */}
-          <div className="p-3 bg-slate-50/70 rounded-lg border border-slate-200/60">
-            <span className="text-[11px] font-semibold text-slate-500 block mb-2 flex items-center gap-1">
-              <Sparkles size={12} className="text-[#159A1D]" />
-              Quick Pick From Store Catalog:
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {CATALOG_ITEMS.slice(0, 7).map(catItem => (
-                <button
-                  type="button"
-                  key={catItem.sku}
-                  onClick={() => handleAddItemRow(catItem)}
-                  className="px-2.5 py-1 text-[11px] font-medium bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#159A1D] border border-slate-200 hover:border-[#159A1D]/40 rounded-md transition-all shadow-2xs"
-                >
-                  + {catItem.name} (${catItem.costPrice.toFixed(2)})
-                </button>
-              ))}
+          {catalogOptions.length > 0 && (
+            <div className="p-3 bg-slate-50/70 rounded-lg border border-slate-200/60">
+              <span className="text-[11px] font-semibold text-slate-500 block mb-2 flex items-center gap-1">
+                <Sparkles size={12} className="text-[#159A1D]" />
+                Quick Pick From Store Catalog:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {catalogOptions.slice(0, 8).map(catItem => (
+                  <button
+                    type="button"
+                    key={catItem.sku}
+                    onClick={() => handleAddItemRow(catItem)}
+                    className="px-2.5 py-1 text-[11px] font-medium bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#159A1D] border border-slate-200 hover:border-[#159A1D]/40 rounded-md transition-all shadow-2xs"
+                  >
+                    + {catItem.name} (${catItem.costPrice.toFixed(2)})
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Items Table */}
-          <div className="border border-slate-200 rounded-xl overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[650px]">
+          <div className="border border-slate-200 rounded-xl overflow-visible">
+            <table className="w-full text-left text-xs min-w-[700px]">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[11px]">
                 <tr>
-                  <th className="p-3 w-1/3">Item Description</th>
+                  <th className="p-3 w-1/3">Item / Catalog Selection</th>
                   <th className="p-3 w-28">SKU</th>
                   <th className="p-3 w-24 text-center">Qty</th>
-                  <th className="p-3 w-24">Unit</th>
+                  <th className="p-3 w-28">Unit</th>
                   <th className="p-3 w-28 text-right">Cost Price ($)</th>
                   <th className="p-3 w-24 text-right">Tax (%)</th>
                   <th className="p-3 w-28 text-right">Line Total</th>
@@ -452,25 +441,28 @@ export function CreatePurchaseTab({
                 {items.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50">
                     <td className="p-3">
-                      <div className="space-y-1">
-                        <select
-                          value={item.sku}
-                          onChange={e => handleSelectCatalogItem(item.id, e.target.value)}
-                          className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-md bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
-                        >
-                          <option value="">Custom Item / Select from catalog</option>
-                          {CATALOG_ITEMS.map(c => (
-                            <option key={c.sku} value={c.sku}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="space-y-1.5">
+                        {catalogOptions.length > 0 && (
+                          <Select
+                            size="sm"
+                            value={item.sku}
+                            onChange={val => handleSelectCatalogItem(item.id, val)}
+                            options={[
+                              { value: '', label: 'Custom Item (or select catalog)' },
+                              ...catalogOptions.map(c => ({
+                                value: c.sku,
+                                label: `${c.name} (${c.sku})`
+                              }))
+                            ]}
+                            placeholder="Select from catalog..."
+                          />
+                        )}
                         <input
                           type="text"
                           placeholder="Item Name (e.g. Colombian Supremo)"
                           value={item.itemName}
                           onChange={e => handleUpdateItem(item.id, { itemName: e.target.value })}
-                          className="w-full px-2 py-1 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
+                          className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
                         />
                       </div>
                     </td>
@@ -481,7 +473,7 @@ export function CreatePurchaseTab({
                         placeholder="SKU"
                         value={item.sku}
                         onChange={e => handleUpdateItem(item.id, { sku: e.target.value })}
-                        className="w-full px-2 py-1.5 text-xs font-mono border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
+                        className="w-full px-2.5 py-1.5 text-xs font-mono border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
                       />
                     </td>
 
@@ -491,22 +483,23 @@ export function CreatePurchaseTab({
                         min="1"
                         value={item.orderedQty}
                         onChange={e => handleUpdateItem(item.id, { orderedQty: Math.max(1, parseInt(e.target.value) || 1) })}
-                        className="w-20 px-2 py-1.5 text-xs text-center border border-slate-200 rounded-md font-semibold focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
+                        className="w-20 px-2 py-1.5 text-xs text-center border border-slate-200 rounded-xl font-semibold focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
                       />
                     </td>
 
                     <td className="p-3">
-                      <select
+                      <Select
+                        size="sm"
                         value={item.unit}
-                        onChange={e => handleUpdateItem(item.id, { unit: e.target.value })}
-                        className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
-                      >
-                        <option value="pack">pack</option>
-                        <option value="box">box</option>
-                        <option value="bottle">bottle</option>
-                        <option value="kg">kg</option>
-                        <option value="pcs">pcs</option>
-                      </select>
+                        onChange={val => handleUpdateItem(item.id, { unit: val })}
+                        options={[
+                          { value: 'pack', label: 'pack' },
+                          { value: 'box', label: 'box' },
+                          { value: 'bottle', label: 'bottle' },
+                          { value: 'kg', label: 'kg' },
+                          { value: 'pcs', label: 'pcs' },
+                        ]}
+                      />
                     </td>
 
                     <td className="p-3 text-right">
@@ -516,22 +509,23 @@ export function CreatePurchaseTab({
                         min="0"
                         value={item.unitCost}
                         onChange={e => handleUpdateItem(item.id, { unitCost: Math.max(0, parseFloat(e.target.value) || 0) })}
-                        className="w-24 px-2 py-1.5 text-xs text-right border border-slate-200 rounded-md font-mono focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
+                        className="w-24 px-2 py-1.5 text-xs text-right border border-slate-200 rounded-xl font-mono focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
                       />
                     </td>
 
                     <td className="p-3 text-right">
-                      <select
-                        value={item.taxPercent}
-                        onChange={e => handleUpdateItem(item.id, { taxPercent: parseFloat(e.target.value) || 0 })}
-                        className="w-20 px-2 py-1.5 text-xs text-right border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
-                      >
-                        <option value="0">0%</option>
-                        <option value="5">5%</option>
-                        <option value="8">8%</option>
-                        <option value="12">12%</option>
-                        <option value="18">18%</option>
-                      </select>
+                      <Select
+                        size="sm"
+                        value={String(item.taxPercent)}
+                        onChange={val => handleUpdateItem(item.id, { taxPercent: parseFloat(val) || 0 })}
+                        options={[
+                          { value: '0', label: '0%' },
+                          { value: '5', label: '5%' },
+                          { value: '8', label: '8%' },
+                          { value: '12', label: '12%' },
+                          { value: '18', label: '18%' },
+                        ]}
+                      />
                     </td>
 
                     <td className="p-3 text-right font-bold text-slate-900 font-mono">
@@ -543,7 +537,7 @@ export function CreatePurchaseTab({
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
                         disabled={items.length === 1}
-                        className="p-1 text-slate-300 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-slate-300 rounded"
+                        className="p-1.5 text-slate-300 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-slate-300 rounded-lg transition-colors"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -560,14 +554,14 @@ export function CreatePurchaseTab({
           <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <FileText size={14} className="text-[#159A1D]" />
-              Procurement & Delivery Remarks
+              Purchase & Consignment Remarks
             </h4>
             <textarea
               rows={4}
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. Deliver to rear loading bay between 8:00 AM - 11:00 AM. Pallet jack required. Inspection by lead barista."
-              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
+              placeholder="e.g. Received at rear bay. Invoice verified by store manager."
+              className="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
             />
           </div>
 
@@ -601,7 +595,7 @@ export function CreatePurchaseTab({
                     step="1"
                     value={shippingFee}
                     onChange={e => setShippingFee(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 text-xs text-right border border-slate-200 rounded-md font-mono focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
+                    className="w-20 px-2 py-1 text-xs text-right border border-slate-200 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
                   />
                 </div>
               </div>
@@ -619,7 +613,7 @@ export function CreatePurchaseTab({
                     step="1"
                     value={discount}
                     onChange={e => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                    className="w-20 px-2 py-1 text-xs text-right border border-slate-200 rounded-md font-mono text-emerald-700 focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
+                    className="w-20 px-2 py-1 text-xs text-right border border-slate-200 rounded-lg font-mono text-emerald-700 focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
                   />
                 </div>
               </div>
@@ -637,17 +631,8 @@ export function CreatePurchaseTab({
                 type="submit"
                 className="w-full gap-2"
               >
-                {purchaseType === 'PurchaseOrder' ? (
-                  <>
-                    <ShoppingBag size={16} />
-                    Submit & Issue Purchase Order
-                  </>
-                ) : (
-                  <>
-                    <Receipt size={16} />
-                    Post & Record Purchase Bill
-                  </>
-                )}
+                <Receipt size={16} />
+                Record Direct Purchase & Restock
                 <ArrowRight size={16} />
               </Button>
             </div>

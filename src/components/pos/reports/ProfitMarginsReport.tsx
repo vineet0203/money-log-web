@@ -10,12 +10,35 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { MOCK_PROFIT_MARGINS, exportTableToCsv } from './reportsData';
+import { exportTableToCsv } from './reportsData';
+import { DateRangePreset } from './types';
+import { useProfitMarginsReportQuery } from '@/hooks/queries/posReports';
 import { Download, AlertTriangle, TrendingUp } from 'lucide-react';
 import { PosStatCard } from '@/components/pos/common';
 
-export function ProfitMarginsReport() {
-  const data = MOCK_PROFIT_MARGINS;
+interface ProfitMarginsReportProps {
+  dateRange?: DateRangePreset;
+}
+
+export function ProfitMarginsReport({ dateRange = '30days' }: ProfitMarginsReportProps) {
+  const { data: reportData, isLoading } = useProfitMarginsReportQuery(dateRange);
+
+  const data = reportData || {
+    grossRevenue: 0,
+    totalCogs: 0,
+    grossProfit: 0,
+    grossMarginPercent: 0,
+    operatingExpenses: 0,
+    netOperatingProfit: 0,
+    netMarginPercent: 0,
+    tierBreakdown: [
+      { tier: 'High Margin', range: '≥ 50% Margin', count: 0, revenue: 0, profit: 0 },
+      { tier: 'Mid Margin', range: '25% - 49% Margin', count: 0, revenue: 0, profit: 0 },
+      { tier: 'Low Margin', range: '< 25% Margin', count: 0, revenue: 0, profit: 0 },
+    ],
+    topProfitProducts: [],
+    lowMarginAlerts: [],
+  };
 
   const handleExport = () => {
     const headers = ['Category / Item', 'Profit ($)', 'Margin %', 'Type'];
@@ -69,7 +92,7 @@ export function ProfitMarginsReport() {
 
           <div className="space-y-3">
             {data.tierBreakdown.map(tier => {
-              const share = ((tier.revenue / data.grossRevenue) * 100).toFixed(1);
+              const share = data.grossRevenue > 0 ? ((tier.revenue / data.grossRevenue) * 100).toFixed(1) : '0.0';
               return (
                 <div key={tier.tier} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between mb-1.5 text-xs">
@@ -131,12 +154,21 @@ export function ProfitMarginsReport() {
             </ResponsiveContainer>
           </div>
 
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 flex items-start gap-2 text-xs text-amber-800">
-            <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-            <span>
-              <strong>Strategic Action:</strong> 8 catalog items have margins under 35%. Review supplier contracts or evaluate modest price adjustments.
-            </span>
-          </div>
+          {data.lowMarginAlerts.length > 0 ? (
+            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/80 flex items-start gap-2 text-xs text-amber-800">
+              <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Strategic Action:</strong> {data.lowMarginAlerts.length} catalog items have margins under 35%. Review supplier contracts or evaluate modest price adjustments.
+              </span>
+            </div>
+          ) : (
+            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200/80 flex items-start gap-2 text-xs text-emerald-800">
+              <TrendingUp size={15} className="text-[#159A1D] shrink-0 mt-0.5" />
+              <span>
+                <strong>Catalog Healthy:</strong> All catalog items are performing above 35% margin.
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -163,18 +195,26 @@ export function ProfitMarginsReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.topProfitProducts.map((p, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70">
-                  <td className="py-3 px-4 font-semibold text-slate-900">{p.name}</td>
-                  <td className="py-3 px-3 text-slate-500">{p.category}</td>
-                  <td className="py-3 px-3 text-right font-bold text-[#159A1D]">${p.profit.toFixed(2)}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded-full">
-                      {p.margin.toFixed(1)}%
-                    </span>
+              {data.topProfitProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-slate-400">
+                    No profit data available for this range.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                data.topProfitProducts.map((p, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/70">
+                    <td className="py-3 px-4 font-semibold text-slate-900">{p.name}</td>
+                    <td className="py-3 px-3 text-slate-500">{p.category}</td>
+                    <td className="py-3 px-3 text-right font-bold text-[#159A1D]">${p.profit.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded-full">
+                        {p.margin.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -200,18 +240,26 @@ export function ProfitMarginsReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.lowMarginAlerts.map((p, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70">
-                  <td className="py-3 px-4 font-semibold text-slate-900">{p.name}</td>
-                  <td className="py-3 px-3 text-right text-slate-500">${p.costPrice.toFixed(2)}</td>
-                  <td className="py-3 px-3 text-right font-bold text-slate-900">${p.currentPrice.toFixed(2)}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 font-bold rounded-full border border-amber-200">
-                      {p.margin.toFixed(1)}%
-                    </span>
+              {data.lowMarginAlerts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-slate-400">
+                    No low-margin items under 35%. Excellent profitability!
                   </td>
                 </tr>
-              ))}
+              ) : (
+                data.lowMarginAlerts.map((p, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/70">
+                    <td className="py-3 px-4 font-semibold text-slate-900">{p.name}</td>
+                    <td className="py-3 px-3 text-right text-slate-500">${p.costPrice.toFixed(2)}</td>
+                    <td className="py-3 px-3 text-right font-bold text-slate-900">${p.currentPrice.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="px-2 py-0.5 bg-amber-50 text-amber-700 font-bold rounded-full border border-amber-200">
+                        {p.margin.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

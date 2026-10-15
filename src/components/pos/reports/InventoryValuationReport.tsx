@@ -1,14 +1,28 @@
 "use client";
 
 import React, { useState } from 'react';
-import { MOCK_INVENTORY_VALUATION, exportTableToCsv } from './reportsData';
+import { exportTableToCsv } from './reportsData';
+import { useInventoryValuationReportQuery } from '@/hooks/queries/posReports';
 import { Download, Package, Layers, Award } from 'lucide-react';
 import { PosStatCard } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
 
 export function InventoryValuationReport() {
   const [groupBy, setGroupBy] = useState<'category' | 'brand'>('category');
-  const data = MOCK_INVENTORY_VALUATION;
+  const { data: reportData, isLoading } = useInventoryValuationReportQuery();
+
+  const data = reportData || {
+    totalItems: 0,
+    totalStockUnits: 0,
+    valuationAtCost: 0,
+    valuationAtRetail: 0,
+    potentialProfit: 0,
+    healthyStockCount: 0,
+    lowStockCount: 0,
+    outOfStockCount: 0,
+    categoryValuations: [],
+    brandValuations: [],
+  };
 
   const handleExport = () => {
     if (groupBy === 'category') {
@@ -55,7 +69,7 @@ export function InventoryValuationReport() {
         <PosStatCard
           title="Unrealized Gross Profit"
           value={`$${data.potentialProfit.toLocaleString()}`}
-          subtitle={`${(((data.potentialProfit) / data.valuationAtRetail) * 100).toFixed(1)}% projected margin`}
+          subtitle={`${data.valuationAtRetail > 0 ? (((data.potentialProfit) / data.valuationAtRetail) * 100).toFixed(1) : '0.0'}% projected margin`}
           color="green"
         />
 
@@ -123,31 +137,39 @@ export function InventoryValuationReport() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.categoryValuations.map((c) => {
-                  const potProfit = c.retailValue - c.costValue;
-                  return (
-                    <tr key={c.category} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-5 font-semibold text-slate-900">{c.category}</td>
-                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                        {c.units.toLocaleString()} units
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-semibold text-slate-700">
-                        ${c.costValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-slate-900">
-                        ${c.retailValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">
-                        +${potProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3.5 px-5 text-center">
-                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-full text-[11px]">
-                          {c.margin.toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {data.categoryValuations.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      No inventory valuation data found.
+                    </td>
+                  </tr>
+                ) : (
+                  data.categoryValuations.map((c) => {
+                    const potProfit = c.retailValue - c.costValue;
+                    return (
+                      <tr key={c.category} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-5 font-semibold text-slate-900">{c.category}</td>
+                        <td className="py-3.5 px-4 text-center font-bold text-slate-800">
+                          {c.units.toLocaleString()} units
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-semibold text-slate-700">
+                          ${c.costValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-bold text-slate-900">
+                          ${c.retailValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">
+                          +${potProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3.5 px-5 text-center">
+                          <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-full text-[11px]">
+                            {c.margin.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           ) : (
@@ -162,26 +184,34 @@ export function InventoryValuationReport() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.brandValuations.map((b) => (
-                  <tr key={b.brand} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3.5 px-5 font-semibold text-slate-900 flex items-center gap-2">
-                      <Award size={14} className="text-slate-400" />
-                      <span>{b.brand}</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                      {b.units.toLocaleString()} units
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-slate-700">
-                      ${b.costValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-slate-900">
-                      ${b.retailValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3.5 px-5 text-right font-bold text-[#159A1D]">
-                      +${(b.retailValue - b.costValue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {data.brandValuations.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400">
+                      No brand partner inventory data found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  data.brandValuations.map((b) => (
+                    <tr key={b.brand} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-5 font-semibold text-slate-900 flex items-center gap-2">
+                        <Award size={14} className="text-slate-400" />
+                        <span>{b.brand}</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">
+                        {b.units.toLocaleString()} units
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-semibold text-slate-700">
+                        ${b.costValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-slate-900">
+                        ${b.retailValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-5 text-right font-bold text-[#159A1D]">
+                        +${(b.retailValue - b.costValue).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           )}

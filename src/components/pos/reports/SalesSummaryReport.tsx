@@ -12,14 +12,32 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { MOCK_SALES_SUMMARY, exportTableToCsv } from './reportsData';
-import { Download, ShoppingBag, Receipt, DollarSign, Clock } from 'lucide-react';
+import { exportTableToCsv } from './reportsData';
+import { DateRangePreset } from './types';
+import { useSalesSummaryReportQuery } from '@/hooks/queries/posReports';
+import { Download, ShoppingBag, Receipt, DollarSign, Clock, Loader2 } from 'lucide-react';
 import { PosStatCard } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
 
-export function SalesSummaryReport() {
+interface SalesSummaryReportProps {
+  dateRange?: DateRangePreset;
+}
+
+export function SalesSummaryReport({ dateRange = '30days' }: SalesSummaryReportProps) {
   const [chartView, setChartView] = useState<'daily' | 'hourly'>('daily');
-  const data = MOCK_SALES_SUMMARY;
+  const { data: reportData, isLoading } = useSalesSummaryReportQuery(dateRange);
+
+  const data = reportData || {
+    totalGrossSales: 0,
+    totalDiscounts: 0,
+    totalNetSales: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+    totalTax: 0,
+    totalItemsSold: 0,
+    trend: [],
+    hourlyBreakdown: []
+  };
 
   const handleExport = () => {
     const headers = ['Date', 'Gross Sales ($)', 'Net Sales ($)', 'Orders Count', 'Avg Ticket ($)'];
@@ -48,7 +66,7 @@ export function SalesSummaryReport() {
         <PosStatCard
           title="Total Discounts"
           value={`-$${data.totalDiscounts.toLocaleString()}`}
-          subtitle={`${((data.totalDiscounts / data.totalGrossSales) * 100).toFixed(1)}% of gross`}
+          subtitle={`${data.totalGrossSales > 0 ? ((data.totalDiscounts / data.totalGrossSales) * 100).toFixed(1) : '0.0'}% of gross`}
           color="amber"
         />
 
@@ -203,23 +221,31 @@ export function SalesSummaryReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.trend.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-5 font-semibold text-slate-900">{row.date}, 2026</td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full font-semibold">
-                      {row.orders} orders
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right text-slate-600 font-medium">${row.gross.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right text-amber-700 font-medium">-${(row.gross - row.net).toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">${row.net.toFixed(2)}</td>
-                  <td className="py-3.5 px-4 text-right text-slate-500">${(row.net * 0.08).toFixed(2)}</td>
-                  <td className="py-3.5 px-5 text-right font-mono font-semibold text-slate-900">
-                    ${(row.net / row.orders).toFixed(2)}
+              {data.trend.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    No sales recorded for this date range.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                data.trend.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-5 font-semibold text-slate-900">{row.date}</td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full font-semibold">
+                        {row.orders} orders
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right text-slate-600 font-medium">${row.gross.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right text-amber-700 font-medium">-${(row.gross - row.net).toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">${row.net.toFixed(2)}</td>
+                    <td className="py-3.5 px-4 text-right text-slate-500">${(row.net * 0.08).toFixed(2)}</td>
+                    <td className="py-3.5 px-5 text-right font-mono font-semibold text-slate-900">
+                      ${row.orders > 0 ? (row.net / row.orders).toFixed(2) : '0.00'}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

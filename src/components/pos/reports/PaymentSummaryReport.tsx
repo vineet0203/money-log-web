@@ -8,17 +8,24 @@ import {
   ResponsiveContainer, 
   Tooltip 
 } from 'recharts';
-import { MOCK_PAYMENT_SUMMARY, exportTableToCsv } from './reportsData';
+import { exportTableToCsv } from './reportsData';
+import { DateRangePreset } from './types';
+import { usePaymentSummaryReportQuery } from '@/hooks/queries/posReports';
 import { Download } from 'lucide-react';
 import { PosStatCard } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
 
-export function PaymentSummaryReport() {
-  const methods = MOCK_PAYMENT_SUMMARY;
+interface PaymentSummaryReportProps {
+  dateRange?: DateRangePreset;
+}
+
+export function PaymentSummaryReport({ dateRange = '30days' }: PaymentSummaryReportProps) {
+  const { data: methods = [], isLoading } = usePaymentSummaryReportQuery(dateRange);
   const totalAmount = methods.reduce((sum, m) => sum + m.totalAmount, 0);
   const totalFees = methods.reduce((sum, m) => sum + m.processingFees, 0);
   const totalNet = methods.reduce((sum, m) => sum + m.netCollected, 0);
   const totalTxns = methods.reduce((sum, m) => sum + m.transactions, 0);
+  const cashItem = methods.find(m => m.method.toLowerCase().includes('cash'));
 
   const handleExport = () => {
     const headers = ['Payment Method', 'Transactions', 'Total Collected ($)', 'Share %', 'Processing Fees ($)', 'Net Settled ($)'];
@@ -47,7 +54,7 @@ export function PaymentSummaryReport() {
         <PosStatCard
           title="Total Card & Gateway Fees"
           value={`-$${totalFees.toLocaleString()}`}
-          subtitle={`${((totalFees / totalAmount) * 100).toFixed(2)}% effective merchant rate`}
+          subtitle={`${totalAmount > 0 ? ((totalFees / totalAmount) * 100).toFixed(2) : '0.00'}% effective merchant rate`}
           color="amber"
         />
 
@@ -60,8 +67,8 @@ export function PaymentSummaryReport() {
 
         <PosStatCard
           title="Cash in Register Intake"
-          value={`$${(methods.find(m => m.method.includes('Cash'))?.totalAmount || 0).toLocaleString()}`}
-          subtitle="27.0% zero-fee cash payments"
+          value={`$${(cashItem?.totalAmount || 0).toLocaleString()}`}
+          subtitle={`${cashItem ? cashItem.percentage.toFixed(1) : '0.0'}% zero-fee cash payments`}
           color="slate"
         />
       </div>
@@ -143,25 +150,33 @@ export function PaymentSummaryReport() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {methods.map((m) => (
-                  <tr key={m.method} className="hover:bg-slate-50/70">
-                    <td className="py-3.5 px-4 font-semibold text-slate-900 flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }}></span>
-                      <span>{m.method}</span>
+                {methods.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      No payment transactions recorded for this date range.
                     </td>
-                    <td className="py-3.5 px-3 text-center font-bold text-slate-700">{m.transactions}</td>
-                    <td className="py-3.5 px-3 text-right font-bold text-slate-900">${m.totalAmount.toFixed(2)}</td>
-                    <td className="py-3.5 px-3 text-center">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[11px]">
-                        {m.percentage}%
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3 text-right text-amber-700 font-medium">
-                      {m.processingFees > 0 ? `-$${m.processingFees.toFixed(2)}` : '$0.00'}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">${m.netCollected.toFixed(2)}</td>
                   </tr>
-                ))}
+                ) : (
+                  methods.map((m) => (
+                    <tr key={m.method} className="hover:bg-slate-50/70">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900 flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }}></span>
+                        <span>{m.method}</span>
+                      </td>
+                      <td className="py-3.5 px-3 text-center font-bold text-slate-700">{m.transactions}</td>
+                      <td className="py-3.5 px-3 text-right font-bold text-slate-900">${m.totalAmount.toFixed(2)}</td>
+                      <td className="py-3.5 px-3 text-center">
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[11px]">
+                          {m.percentage}%
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-amber-700 font-medium">
+                        {m.processingFees > 0 ? `-$${m.processingFees.toFixed(2)}` : '$0.00'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">${m.netCollected.toFixed(2)}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

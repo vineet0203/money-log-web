@@ -13,14 +13,21 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
-import { MOCK_CATEGORY_SALES, exportTableToCsv } from './reportsData';
+import { exportTableToCsv } from './reportsData';
+import { DateRangePreset } from './types';
+import { useCategorySalesReportQuery } from '@/hooks/queries/posReports';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function CategoryWiseReport() {
-  const categories = MOCK_CATEGORY_SALES;
+interface CategoryWiseReportProps {
+  dateRange?: DateRangePreset;
+}
+
+export function CategoryWiseReport({ dateRange = '30days' }: CategoryWiseReportProps) {
+  const { data: categories = [], isLoading } = useCategorySalesReportQuery(dateRange);
 
   const totalRevenue = categories.reduce((sum, c) => sum + c.revenue, 0);
+  const topCategory = categories[0];
 
   const handleExport = () => {
     const headers = ['Category', 'Items Sold', 'Total Revenue ($)', 'Revenue Share %', 'COGS ($)', 'Gross Profit ($)', 'Margin %'];
@@ -121,9 +128,15 @@ export function CategoryWiseReport() {
             </ResponsiveContainer>
           </div>
 
-          <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100">
-            💡 <strong>Insight:</strong> Coffee represents 43.6% of overall revenue and delivers the strongest gross profit margin at 62.6%.
-          </p>
+          {topCategory ? (
+            <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100">
+              💡 <strong>Insight:</strong> {topCategory.category} represents {topCategory.revenueShare}% of overall revenue and delivers a gross profit margin of {topCategory.marginPercent}%.
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400 pt-3 border-t border-slate-100">
+              No category sales recorded for the selected date range.
+            </p>
+          )}
         </div>
       </div>
 
@@ -158,40 +171,48 @@ export function CategoryWiseReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {categories.map((c) => (
-                <tr key={c.category} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-5 font-semibold text-slate-900 flex items-center gap-2.5">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.color }}></span>
-                    <span>{c.category}</span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center font-semibold text-slate-700">
-                    {c.itemsSold.toLocaleString()} units
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-bold text-slate-900">
-                    ${c.revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full font-bold text-[11px]">
-                      {c.revenueShare.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right text-slate-500 font-medium">
-                    ${c.cogs.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">
-                    ${c.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3.5 px-5 text-center">
-                    <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
-                      c.marginPercent >= 50
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-blue-50 text-blue-700 border border-blue-200'
-                    }`}>
-                      {c.marginPercent.toFixed(1)}%
-                    </span>
+              {categories.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    No category sales recorded for this date range.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                categories.map((c) => (
+                  <tr key={c.category} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-5 font-semibold text-slate-900 flex items-center gap-2.5">
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: c.color }}></span>
+                      <span>{c.category}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-center font-semibold text-slate-700">
+                      {c.itemsSold.toLocaleString()} units
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold text-slate-900">
+                      ${c.revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full font-bold text-[11px]">
+                        {c.revenueShare.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right text-slate-500 font-medium">
+                      ${c.cogs.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold text-[#159A1D]">
+                      ${c.grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3.5 px-5 text-center">
+                      <span className={`px-2.5 py-1 rounded-full font-bold text-[11px] ${
+                        c.marginPercent >= 50
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}>
+                        {c.marginPercent.toFixed(1)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -9,6 +9,7 @@ import {
   DollarSign, 
   AlertCircle 
 } from 'lucide-react';
+import { Select } from '@/components/pos/common';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -175,21 +176,18 @@ function RecordPaymentFormDialog({
         )}
 
         {/* Supplier Selector */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700">
-            Supplier / Payee <span className="text-rose-500">*</span>
-          </label>
-          <select
+        <div>
+          <Select
+            label="Supplier / Payee"
+            required
             value={supplierId}
-            onChange={e => handleSupplierSelect(e.target.value)}
-            className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-          >
-            {suppliers.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} — Outstanding: ${s.balancePayable.toFixed(2)}
-              </option>
-            ))}
-          </select>
+            onChange={handleSupplierSelect}
+            options={suppliers.map(s => ({
+              value: s.id,
+              label: `${s.name} — Outstanding: $${s.balancePayable.toFixed(2)}`
+            }))}
+            placeholder="Select supplier..."
+          />
         </div>
 
         {/* Selected Supplier Banking Info Card */}
@@ -211,22 +209,19 @@ function RecordPaymentFormDialog({
         )}
 
         {/* Allocate to Bill (Optional) */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700">
-            Allocate Payment to Bill (Optional)
-          </label>
-          <select
+        <div>
+          <Select
+            label="Allocate Payment to Bill (Optional)"
             value={billNumber}
-            onChange={e => handleBillSelect(e.target.value)}
-            className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-          >
-            <option value="">General On-Account Payment (Reduces total balance)</option>
-            {supplierOpenBills.map(b => (
-              <option key={b.id} value={b.billNumber}>
-                {b.billNumber} ({b.supplierInvoiceNo}) — Due: ${b.balanceDue.toFixed(2)} [Due Date: {b.dueDate}]
-              </option>
-            ))}
-          </select>
+            onChange={handleBillSelect}
+            options={[
+              { value: '', label: 'General On-Account Payment (Reduces total balance)' },
+              ...supplierOpenBills.map(b => ({
+                value: b.billNumber,
+                label: `${b.billNumber} (${b.supplierInvoiceNo || 'N/A'}) — Due: $${b.balanceDue.toFixed(2)} [Due Date: ${b.dueDate}]`
+              }))
+            ]}
+          />
         </div>
 
         {/* Payment Amount & Date Grid */}
@@ -263,17 +258,13 @@ function RecordPaymentFormDialog({
 
         {/* Payment Mode & Reference Number */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">Payment Mode</label>
-            <select
+          <div>
+            <Select
+              label="Payment Mode"
               value={paymentMode}
-              onChange={e => setPaymentMode(e.target.value as PaymentMethod)}
-              className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-            >
-              {PAYMENT_METHODS.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+              onChange={val => setPaymentMode(val as PaymentMethod)}
+              options={PAYMENT_METHODS.map(m => ({ value: m, label: m }))}
+            />
           </div>
 
           <div className="space-y-1.5">

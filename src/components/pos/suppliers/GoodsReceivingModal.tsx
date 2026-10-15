@@ -9,6 +9,7 @@ import {
   AlertCircle, 
   FileText
 } from 'lucide-react';
+import { Select } from '@/components/pos/common';
 
 interface GoodsReceivingModalProps {
   isOpen: boolean;
@@ -175,21 +176,18 @@ function GoodsReceivingFormDialog({
 
         {/* PO Selector & Logistics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700">
-              Select Purchase Order <span className="text-rose-500">*</span>
-            </label>
-            <select
+          <div>
+            <Select
+              label="Select Purchase Order"
+              required
               value={selectedPoNumber}
-              onChange={e => handlePoChange(e.target.value)}
-              className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-            >
-              {eligiblePOs.map(po => (
-                <option key={po.id} value={po.poNumber}>
-                  {po.poNumber} — {po.supplierName} ({po.status})
-                </option>
-              ))}
-            </select>
+              onChange={handlePoChange}
+              options={eligiblePOs.map(po => ({
+                value: po.poNumber,
+                label: `${po.poNumber} — ${po.supplierName} (${po.status})`
+              }))}
+              placeholder="Select PO..."
+            />
           </div>
 
           <div className="space-y-1.5">

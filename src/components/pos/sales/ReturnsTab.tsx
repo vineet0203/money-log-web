@@ -1324,12 +1324,6 @@ export default function ReturnsTab() {
                 <p className="text-slate-700 whitespace-pre-wrap">{selectedReturnDetails.notes}</p>
               </div>
             )}
-
-            <div className="flex justify-end pt-2 border-t border-slate-100">
-              <Button type="button" size="sm" variant="outline" onClick={() => setSelectedReturnDetails(null)}>
-                Close
-              </Button>
-            </div>
           </div>
         )}
       </Modal>
@@ -1516,12 +1510,6 @@ export default function ReturnsTab() {
                   <p className="text-slate-700 whitespace-pre-wrap">{selectedExchangeDetails.notes}</p>
                 </div>
               )}
-
-              <div className="flex justify-end pt-2 border-t border-slate-100">
-                <Button type="button" size="sm" variant="outline" onClick={() => setSelectedExchangeDetails(null)}>
-                  Close
-                </Button>
-              </div>
             </div>
           );
         })()}

@@ -14,7 +14,7 @@ import {
   XCircle, 
   DollarSign
 } from 'lucide-react';
-import { PosStatCard, PosStatusBadge, PosSearchInput } from '@/components/pos/common';
+import { PosStatCard, PosStatusBadge, PosSearchInput, Select } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
 
 interface PurchaseOrdersTabProps {
@@ -106,16 +106,17 @@ export function PurchaseOrdersTab({
             className="min-w-[200px]"
           />
 
-          <select
-            value={selectedSupplierId}
-            onChange={e => setSelectedSupplierId(e.target.value)}
-            className="px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 bg-white"
-          >
-            <option value="All">All Suppliers</option>
-            {suppliers.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          <div className="w-48">
+            <Select
+              size="sm"
+              value={selectedSupplierId}
+              onChange={setSelectedSupplierId}
+              options={[
+                { value: 'All', label: 'All Suppliers' },
+                ...suppliers.map(s => ({ value: s.id, label: s.name }))
+              ]}
+            />
+          </div>
 
           {/* Status Pills */}
           <div className="flex items-center gap-1 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-lg overflow-x-auto">
