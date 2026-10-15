@@ -63,12 +63,16 @@ const isItemOrChildActive = (item: MenuItem, path: string): boolean => {
   return false;
 };
 
-const getInitialOpenMenus = (pathname: string): Record<string, boolean> => {
-  const activeGroup = menuItems.find(item => item.items && isItemOrChildActive(item, pathname));
+const getInitialOpenMenus = (pathname: string = '', currentOpen?: Record<string, boolean>): Record<string, boolean> => {
   const state: Record<string, boolean> = {};
   menuItems.forEach(item => {
     if (item.items) {
-      state[item.title] = activeGroup ? item.title === activeGroup.title : false;
+      if (currentOpen && item.title in currentOpen) {
+        state[item.title] = isItemOrChildActive(item, pathname) ? true : currentOpen[item.title];
+      } else {
+        // By default expanded
+        state[item.title] = true;
+      }
     }
   });
   return state;
@@ -83,14 +87,14 @@ export function Sidebar() {
 
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
-    setOpenMenus(getInitialOpenMenus(pathname));
+    setOpenMenus(prev => getInitialOpenMenus(pathname, prev));
   }
 
   const toggleMenu = (title: string) => {
     if (isCollapsed) setIsCollapsed(false);
     setOpenMenus(prev => ({
       ...prev,
-      [title]: !prev[title]
+      [title]: !(prev[title] ?? true)
     }));
   };
 
@@ -201,7 +205,7 @@ export function Sidebar() {
         {menuItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = isPathActive(item.href) || (item.items && item.items.some(subItem => isPathActive(subItem.href)));
-          const isOpen = openMenus[item.title];
+          const isOpen = openMenus[item.title] ?? true;
 
           if (item.href) {
             // Single Link Item

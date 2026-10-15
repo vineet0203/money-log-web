@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppData } from '@/providers/AppDataProvider';
 import { TotalBalanceCard } from '@/components/dashboardpage/TotalBalanceCard';
 import { StatCard } from '@/components/dashboardpage/StatCard';
@@ -9,11 +9,15 @@ import { SpendingByCategoryChart } from '@/components/dashboardpage/SpendingByCa
 import { RecentTransactionsCard } from '@/components/dashboardpage/RecentTransactionsCard';
 import { BudgetOverviewCard } from '@/components/dashboardpage/BudgetOverviewCard';
 import { SubscriptionsBillsCard } from '@/components/dashboardpage/SubscriptionsBillsCard';
+import { PosDashboardView } from '@/components/dashboardpage/PosDashboardView';
 import { useGetDashboardOverview } from '@/hooks/queries/dashboard';
+import { Tabs, TabItem } from '@/components/ui/Tabs';
+import { LayoutDashboard, Store } from 'lucide-react';
 
 export default function DashboardPage() {
   const { setHeaderData } = useAppData();
   const { data: dashboard, isLoading } = useGetDashboardOverview();
+  const [activeTab, setActiveTab] = useState<'finance' | 'pos'>('finance');
 
   const format = (val: number) => Math.abs(val).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   const formatSign = (val: number) => (val >= 0 ? '+' : '-') + format(val);
@@ -22,70 +26,114 @@ export default function DashboardPage() {
     setHeaderData("Dashboard");
   }, [setHeaderData]);
 
+  const dashboardTabs: TabItem<'finance' | 'pos'>[] = [
+    {
+      id: 'finance',
+      label: 'Finance & Accounts',
+      icon: LayoutDashboard,
+    },
+    {
+      id: 'pos',
+      label: 'Point of Sale (POS)',
+      icon: Store,
+      badge: (
+        <span
+          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors ${
+            activeTab === 'pos'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-emerald-100 text-emerald-800'
+          }`}
+        >
+          Live
+        </span>
+      ),
+    },
+  ];
+
   return (
-    <div className="mx-auto space-y-6 pb-12">
-      {/* Top Stats Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <TotalBalanceCard data={dashboard?.totalBalance} />
-        <StatCard 
-          title="Today's Income" 
-          amount={dashboard ? formatSign(dashboard.todayIncome.today) : '$0.00'}
-          metrics={[
-            { label: 'This week', value: dashboard ? format(dashboard.todayIncome.thisWeek) : '$0.00' },
-            { label: 'This month', value: dashboard ? format(dashboard.todayIncome.thisMonth) : '$0.00' }
-          ]}
-        />
-        <StatCard 
-          title="Today's Expenses" 
-          amount={dashboard ? formatSign(-dashboard.todayExpenses.today) : '$0.00'}
-          amountColor="text-[#EF4444]"
-          metrics={[
-            { label: 'This week', value: dashboard ? format(dashboard.todayExpenses.thisWeek) : '$0.00' },
-            { label: 'This month', value: dashboard ? format(dashboard.todayExpenses.thisMonth) : '$0.00' }
-          ]}
+    <div className="mx-auto space-y-6 pb-12 w-full max-w-full">
+      {/* Dashboard View Tabs Container */}
+      <div className="flex items-center max-w-full overflow-x-auto custom-scrollbar pb-0.5">
+        <Tabs<'finance' | 'pos'>
+          tabs={dashboardTabs}
+          activeTab={activeTab}
+          onChange={(tabId) => setActiveTab(tabId)}
+          variant="contained"
+          size="md"
         />
       </div>
 
-      {/* Stats Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <StatCard 
-          title="Net Profit" 
-          amount={dashboard ? formatSign(dashboard.netProfit.daily) : '$0.00'}
-          amountColor={dashboard && dashboard.netProfit.daily < 0 ? 'text-[#EF4444]' : 'text-[#159A1D]'}
-          metrics={[
-            { label: 'Daily P&L', value: dashboard ? formatSign(dashboard.netProfit.daily) : '$0.00', valueColor: dashboard?.netProfit.daily >= 0 ? 'text-[#159A1D]' : 'text-[#EF4444]' },
-            { label: 'Monthly', value: dashboard ? formatSign(dashboard.netProfit.monthly) : '$0.00', valueColor: dashboard?.netProfit.monthly >= 0 ? 'text-[#159A1D]' : 'text-[#EF4444]' },
-            { label: 'Yearly', value: dashboard ? formatSign(dashboard.netProfit.yearly) : '$0.00', valueColor: dashboard?.netProfit.yearly >= 0 ? 'text-[#159A1D]' : 'text-[#EF4444]' }
-          ]}
-        />
-        <StatCard 
-          title="Cash Flow" 
-          amount={dashboard ? format(dashboard.todayIncome.thisMonth + dashboard.todayExpenses.thisMonth) : '$0.00'}
-          amountColor="text-[#3B82F6]"
-          metrics={[
-            { label: 'Money in', value: dashboard ? format(dashboard.todayIncome.thisMonth) : '$0.00', valueColor: 'text-[#159A1D]' },
-            { label: 'Money out', value: dashboard ? format(dashboard.todayExpenses.thisMonth) : '$0.00', valueColor: 'text-[#EF4444]' }
-          ]}
-        />
-        <SubscriptionsBillsCard count={dashboard?.upcomingSubscriptions?.count} items={dashboard?.upcomingSubscriptions?.items} />
-      </div>
+      {/* Tab 1: Finance & Accounts */}
+      {activeTab === 'finance' && (
+        <div className="space-y-6 max-w-full">
+          {/* Top Stats Row 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            <TotalBalanceCard data={dashboard?.totalBalance} />
+            <StatCard 
+              title="Today's Income" 
+              amount={dashboard ? formatSign(dashboard.todayIncome.today) : '$0.00'}
+              metrics={[
+                { label: 'This week', value: dashboard ? format(dashboard.todayIncome.thisWeek) : '$0.00' },
+                { label: 'This month', value: dashboard ? format(dashboard.todayIncome.thisMonth) : '$0.00' }
+              ]}
+            />
+            <StatCard 
+              title="Today's Expenses" 
+              amount={dashboard ? formatSign(-dashboard.todayExpenses.today) : '$0.00'}
+              amountColor="text-[#EF4444]"
+              metrics={[
+                { label: 'This week', value: dashboard ? format(dashboard.todayExpenses.thisWeek) : '$0.00' },
+                { label: 'This month', value: dashboard ? format(dashboard.todayExpenses.thisMonth) : '$0.00' }
+              ]}
+            />
+          </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <IncomeVsExpensesChart data={dashboard?.charts?.incomeVsExpenses} />
+          {/* Stats Row 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            <StatCard 
+              title="Net Profit" 
+              amount={dashboard ? formatSign(dashboard.netProfit.daily) : '$0.00'}
+              amountColor={dashboard && dashboard.netProfit.daily < 0 ? 'text-[#EF4444]' : 'text-[#159A1D]'}
+              metrics={[
+                { label: 'Daily P&L', value: dashboard ? formatSign(dashboard.netProfit.daily) : '$0.00', valueColor: dashboard?.netProfit.daily >= 0 ? 'text-[#159A1D]' : 'text-[#EF4444]' },
+                { label: 'Monthly', value: dashboard ? formatSign(dashboard.netProfit.monthly) : '$0.00', valueColor: dashboard?.netProfit.monthly >= 0 ? 'text-[#159A1D]' : 'text-[#EF4444]' },
+                { label: 'Yearly', value: dashboard ? formatSign(dashboard.netProfit.yearly) : '$0.00', valueColor: dashboard?.netProfit.yearly >= 0 ? 'text-[#159A1D]' : 'text-[#EF4444]' }
+              ]}
+            />
+            <StatCard 
+              title="Cash Flow" 
+              amount={dashboard ? format(dashboard.todayIncome.thisMonth + dashboard.todayExpenses.thisMonth) : '$0.00'}
+              amountColor="text-[#3B82F6]"
+              metrics={[
+                { label: 'Money in', value: dashboard ? format(dashboard.todayIncome.thisMonth) : '$0.00', valueColor: 'text-[#159A1D]' },
+                { label: 'Money out', value: dashboard ? format(dashboard.todayExpenses.thisMonth) : '$0.00', valueColor: 'text-[#EF4444]' }
+              ]}
+            />
+            <SubscriptionsBillsCard count={dashboard?.upcomingSubscriptions?.count} items={dashboard?.upcomingSubscriptions?.items} />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+            <div className="xl:col-span-2">
+              <IncomeVsExpensesChart data={dashboard?.charts?.incomeVsExpenses} />
+            </div>
+            <div className="xl:col-span-1">
+              <SpendingByCategoryChart data={dashboard?.charts?.spendingByCategory} />
+            </div>
+          </div>
+
+          {/* Bottom Row */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <RecentTransactionsCard transactions={dashboard?.recentTransactions} />
+            <BudgetOverviewCard budgets={dashboard?.budgets} />
+          </div>
         </div>
-        <div className="lg:col-span-1">
-          <SpendingByCategoryChart data={dashboard?.charts?.spendingByCategory} />
-        </div>
-      </div>
+      )}
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RecentTransactionsCard transactions={dashboard?.recentTransactions} />
-        <BudgetOverviewCard budgets={dashboard?.budgets} />
-        
-      </div>
+      {/* Tab 2: Point of Sale (POS) */}
+      {activeTab === 'pos' && (
+        <PosDashboardView />
+      )}
     </div>
   );
 }

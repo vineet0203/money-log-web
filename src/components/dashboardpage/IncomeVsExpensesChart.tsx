@@ -10,29 +10,29 @@ export function IncomeVsExpensesChart({ data = [] }: { data?: any[] }) {
   };
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100 flex flex-col h-full min-h-[350px]">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-slate-100 flex flex-col h-full min-h-[350px]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 sm:mb-6">
         <div>
-          <h3 className="font-semibold text-slate-800">Income vs expenses</h3>
-          <div className="flex items-center gap-4 mt-2">
+          <h3 className="font-semibold text-slate-800 text-sm sm:text-base">Income vs expenses</h3>
+          <div className="flex items-center gap-4 mt-1.5">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#3B82F6]"></span>
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#3B82F6]"></span>
               <span className="text-xs text-slate-500 font-medium">Income</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-[#EF4444]"></span>
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#EF4444]"></span>
               <span className="text-xs text-slate-500 font-medium">Expenses</span>
             </div>
           </div>
         </div>
-        <button className="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+        <button type="button" className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors self-start sm:self-auto shrink-0">
           Last 6 months
         </button>
       </div>
 
-      <div className="flex-1 w-full -ml-4">
+      <div className="flex-1 w-full min-h-[240px]">
         {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-slate-400">
+          <div className="h-full flex items-center justify-center text-slate-400 text-xs sm:text-sm">
             No data available for the last 6 months.
           </div>
         ) : (
@@ -44,12 +44,12 @@ export function IncomeVsExpensesChart({ data = [] }: { data?: any[] }) {
                 axisLine={false} 
                 tickLine={false} 
                 tick={{ fontSize: 11, fill: '#94a3b8' }} 
-                dy={10} 
+                dy={6} 
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }} 
                 tickFormatter={formatYAxis}
               />
               <Tooltip 
@@ -57,8 +57,8 @@ export function IncomeVsExpensesChart({ data = [] }: { data?: any[] }) {
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, '']}
               />
-              <Bar dataKey="income" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={24} />
-              <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={24} />
+              <Bar dataKey="income" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={22} />
+              <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} barSize={22} />
             </BarChart>
           </ResponsiveContainer>
         )}
