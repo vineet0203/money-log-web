@@ -37,7 +37,6 @@ export function middleware(request: NextRequest) {
     '/overview',
     '/transactions',
     '/subscriptions',
-    '/acc-manage',
     '/payables',
     '/budget',
     '/goals',

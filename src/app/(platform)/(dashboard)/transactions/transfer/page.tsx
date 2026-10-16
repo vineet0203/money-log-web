@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useAppData } from '@/providers/AppDataProvider';
-import { ArrowLeftRight, Landmark } from 'lucide-react';
+import { ArrowLeftRight } from 'lucide-react';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function TransferMoneyTrackingPage() {
@@ -19,9 +19,6 @@ export default function TransferMoneyTrackingPage() {
           icon={<ArrowLeftRight size={36} className="text-slate-400" />}
           title="Transfers Tracking is Parked"
           description="Internal bank-to-bank transfers require automated account linking and Plaid settlement, which will be released in an upcoming update."
-          actionText="View Linked Accounts"
-          actionHref="/acc-manage/accounts"
-          actionIcon={<Landmark size={16} />}
         />
       </div>
     </div>
