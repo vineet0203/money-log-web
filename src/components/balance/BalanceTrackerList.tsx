@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Plus, ArrowDownCircle, ArrowUpCircle, Paperclip } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/Select';
 import { useAppData } from '@/providers/AppDataProvider';
 import { useGetTransactions, useGetTransactionStats } from '@/hooks/queries/transactions';
+import { TransactionActionMenu } from '@/components/transactions/TransactionActionMenu';
 
 export default function BalanceTrackerList() {
   const router = useRouter();
@@ -87,7 +88,36 @@ export default function BalanceTrackerList() {
     {
       key: 'title',
       header: 'Title',
-      render: (row) => <span className="text-slate-900 font-semibold">{row.title}</span>
+      render: (row) => (
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-900 font-semibold">{row.title}</span>
+            {row.subscription_id && (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200"
+                title="Linked to recurring payment"
+              >
+                Recurring
+              </span>
+            )}
+            {row.receipt_url && (
+              <a
+                href={row.receipt_url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#159A1D] hover:text-green-700 p-0.5 inline-flex items-center"
+                title="View attached receipt"
+              >
+                <Paperclip size={13} />
+              </a>
+            )}
+          </div>
+          {row.description && (
+            <span className="text-xs text-slate-400 font-normal truncate max-w-xs">{row.description}</span>
+          )}
+        </div>
+      )
     },
     {
       key: 'date',
@@ -132,6 +162,11 @@ export default function BalanceTrackerList() {
           {row.type === 'income' ? '+' : '-'}${Number(row.amount).toFixed(2)}
         </span>
       )
+    },
+    {
+      key: 'action',
+      header: 'Action',
+      render: (row) => <TransactionActionMenu transaction={row} />
     }
   ];
 

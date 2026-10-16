@@ -13,6 +13,7 @@ export interface ModalProps {
   submitText?: string;
   isSubmitDisabled?: boolean;
   maxWidth?: string;
+  hideFooter?: boolean;
 }
 
 export function Modal({
@@ -26,6 +27,7 @@ export function Modal({
   submitText = 'Submit',
   isSubmitDisabled = false,
   maxWidth = 'max-w-lg',
+  hideFooter = false,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -80,23 +82,25 @@ export function Modal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-          >
-            {cancelText}
-          </button>
-          {onSubmit && (
+        {!hideFooter && (
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex-shrink-0">
             <button
-              onClick={onSubmit}
-              disabled={isSubmitDisabled}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-[#159A1D] rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={onClose}
+              className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
             >
-              {submitText}
+              {cancelText}
             </button>
-          )}
-        </div>
+            {onSubmit && (
+              <button
+                onClick={onSubmit}
+                disabled={isSubmitDisabled}
+                className="px-5 py-2.5 text-sm font-semibold text-white bg-[#159A1D] rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {submitText}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>,
     document.body

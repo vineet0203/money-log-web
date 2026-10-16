@@ -7,11 +7,12 @@ interface DatePickerProps {
   onChange?: (date: string) => void;
   placeholder?: string;
   required?: boolean;
+  disabled?: boolean;
   error?: string;
   className?: string;
 }
 
-export function DatePicker({ label, value, onChange, placeholder, required, error, className = '' }: DatePickerProps) {
+export function DatePicker({ label, value, onChange, placeholder, required, disabled = false, error, className = '' }: DatePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleIconClick = () => {
@@ -50,14 +51,16 @@ export function DatePicker({ label, value, onChange, placeholder, required, erro
           type="date" 
           value={value || ''}
           onChange={(e) => onChange?.(e.target.value)}
-          onClick={handleIconClick}
+          onClick={disabled ? undefined : handleIconClick}
+          disabled={disabled}
           placeholder={placeholder}
-          className={`w-full px-4 py-3 bg-white border rounded-xl text-sm font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-[#4F627A] placeholder:text-slate-400 hide-native-date-icon cursor-pointer ${error ? 'border-red-500' : 'border-slate-200'} ${className}`}
+          className={`w-full px-4 py-3 bg-white border rounded-xl text-sm font-medium shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] text-[#4F627A] placeholder:text-slate-400 hide-native-date-icon ${disabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-75' : 'cursor-pointer'} ${error ? 'border-red-500' : 'border-slate-200'} ${className}`}
         />
         <button
           type="button"
-          onClick={handleIconClick}
-          className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 transition-colors"
+          onClick={disabled ? undefined : handleIconClick}
+          disabled={disabled}
+          className={`absolute inset-y-0 right-0 flex items-center pr-4 transition-colors ${disabled ? 'text-slate-300 cursor-not-allowed' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <CalendarIcon size={18} strokeWidth={2.5} />
         </button>

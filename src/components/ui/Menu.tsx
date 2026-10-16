@@ -16,6 +16,7 @@ export type MenuItemType =
       onClick?: () => void;
       href?: string;
       disabled?: boolean;
+      title?: string;
     };
 
 interface MenuProps {
@@ -103,6 +104,7 @@ export function Menu({ items, icon }: MenuProps) {
             <Link 
               key={idx}
               href={item.href}
+              title={item.title}
               className={`${baseClasses} ${colorClasses}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -120,6 +122,7 @@ export function Menu({ items, icon }: MenuProps) {
             key={idx}
             onClick={(e) => handleItemClick(e, item.onClick)}
             disabled={item.disabled}
+            title={item.title}
             className={`${baseClasses} ${colorClasses}`}
           >
             {item.icon}

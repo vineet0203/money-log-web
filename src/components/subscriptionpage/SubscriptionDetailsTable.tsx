@@ -7,6 +7,8 @@ import { SubscriptionActionMenu } from './SubscriptionActionMenu';
 import { SubscriptionLogo } from '@/components/ui/SubscriptionLogo';
 import { Select } from '@/components/ui/Select';
 import { useRouter } from 'next/navigation';
+import { formatRecurrenceFrequency } from '@/lib/recurrenceFormatters';
+import { Zap, AlertCircle } from 'lucide-react';
 
 export function SubscriptionDetailsTable() {
   const [activeTab, setActiveTab] = useState('All');
@@ -37,6 +39,9 @@ export function SubscriptionDetailsTable() {
       daysLeft: sub.days_left,
       amount: `$${Number(sub.amount).toFixed(2)}`,
       billingCycle: sub.billing_cycle,
+      frequencyLabel: formatRecurrenceFrequency(sub),
+      autoPost: !!sub.auto_post,
+      missedCount: sub.missed_count || 0,
       status: sub.computed_status,
       dbStatus: sub.status,
       nextBillingDate: sub.next_billing_date
@@ -50,7 +55,21 @@ export function SubscriptionDetailsTable() {
       render: (row) => (
         <div className="flex items-center gap-3">
           <SubscriptionLogo name={row.name} />
-          <span className="text-slate-900 font-semibold">{row.name}</span>
+          <div className="flex flex-col">
+            <span className="text-slate-900 font-semibold">{row.name}</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {row.autoPost && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100">
+                  <Zap className="w-2.5 h-2.5" /> Auto-post
+                </span>
+              )}
+              {row.missedCount > 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-100">
+                  <AlertCircle className="w-2.5 h-2.5" /> {row.missedCount} missed
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       )
     },
@@ -70,27 +89,25 @@ export function SubscriptionDetailsTable() {
         </span>
       )
     },
-
     {
-
       key: 'dueDate',
-      header: 'Due Date',
+      header: 'Next Due Date',
       render: (row) => (
         <div className="flex flex-col gap-1.5">
           <span className="text-[#849AB4] text-sm leading-none">{row.dueDate}</span>
           <span className={`text-xs font-bold leading-none ${row.daysLeft <= 1 ? 'text-[#EF4444]' : 'text-[#159A1D]'}`}>
-            In {row.daysLeft} {row.daysLeft === 1 ? 'Day' : 'Days'}
+            {row.daysLeft < 0 ? `${Math.abs(row.daysLeft)} days overdue` : `In ${row.daysLeft} ${row.daysLeft === 1 ? 'Day' : 'Days'}`}
           </span>
         </div>
       )
     },
     {
       key: 'amount',
-      header: 'Amount',
+      header: 'Amount / Cadence',
       render: (row) => (
         <div className="flex flex-col gap-1.5">
           <span className="text-slate-900 font-bold leading-none">{row.amount}</span>
-          <span className="text-xs text-[#849AB4] capitalize leading-none">{row.billingCycle}</span>
+          <span className="text-xs text-[#849AB4] leading-none">{row.frequencyLabel}</span>
         </div>
       )
     },

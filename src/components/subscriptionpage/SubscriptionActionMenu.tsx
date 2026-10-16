@@ -10,7 +10,7 @@ import { useSnackbar } from 'notistack';
 interface Props {
   type?: 'expense' | 'income';
   subscriptionId: string;
-  status: 'active' | 'cancelled';
+  status: 'active' | 'paused' | 'cancelled';
   nextBillingDate?: string;
   billingCycle?: string;
 }
@@ -21,7 +21,7 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
   const [modalAction, setModalAction] = useState<'cancel' | 'reactivate' | null>(null);
 
   const updateStatusMutation = useMutation({
-    mutationFn: async (newStatus: 'active' | 'cancelled') => {
+    mutationFn: async (newStatus: 'active' | 'paused' | 'cancelled') => {
       const { data } = await api.put(`/subscriptions/${subscriptionId}`, { status: newStatus });
       return data;
     },
