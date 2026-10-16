@@ -8,7 +8,7 @@ export interface SeriesPoint {
 }
 
 export interface SeriesReportResponse {
-  metric: 'expense' | 'income' | 'net';
+  metric: 'expense' | 'income' | 'net' | 'cumulative_net';
   from: string;
   to: string;
   granularity: 'day' | 'week' | 'month';
@@ -35,10 +35,29 @@ export interface MonthlyReportResponse {
   incomeCategoryBreakdown: CategoryBreakdownItem[];
 }
 
+export interface BreakdownItem {
+  key: string;
+  label: string;
+  color?: string;
+  current: number;
+  previous: number | null;
+  delta: number | null;
+  share: number;
+}
+
+export interface BreakdownReportResponse {
+  dimension: 'category' | 'day_of_week' | 'recurrence';
+  from: string;
+  to: string;
+  items: BreakdownItem[];
+}
+
 export const useGetSeriesReport = (params?: {
-  metric?: 'expense' | 'income' | 'net';
+  metric?: 'expense' | 'income' | 'net' | 'cumulative_net';
   from?: string;
   to?: string;
+  fromDate?: string;
+  toDate?: string;
   granularity?: 'day' | 'week' | 'month';
   category_id?: number | string;
 }) => {
@@ -47,12 +66,45 @@ export const useGetSeriesReport = (params?: {
     queryFn: async (): Promise<SeriesReportResponse> => {
       const searchParams = new URLSearchParams();
       if (params?.metric) searchParams.append('metric', params.metric);
-      if (params?.from) searchParams.append('from', params.from);
-      if (params?.to) searchParams.append('to', params.to);
+      const from = params?.from || params?.fromDate;
+      const to = params?.to || params?.toDate;
+      if (from) searchParams.append('from', from);
+      if (to) searchParams.append('to', to);
       if (params?.granularity) searchParams.append('granularity', params.granularity);
       if (params?.category_id) searchParams.append('category_id', String(params.category_id));
 
       const { data } = await api.get(`/reports/series?${searchParams.toString()}`);
+      return data;
+    },
+  });
+};
+
+export const useGetBreakdownReport = (params?: {
+  dimension?: 'category' | 'day_of_week' | 'recurrence';
+  from?: string;
+  to?: string;
+  fromDate?: string;
+  toDate?: string;
+  type?: string;
+  category_id?: number | string;
+  search?: string;
+  has_receipt?: boolean | string;
+}) => {
+  return useQuery({
+    queryKey: ['reports', 'breakdown', params],
+    queryFn: async (): Promise<BreakdownReportResponse> => {
+      const searchParams = new URLSearchParams();
+      if (params?.dimension) searchParams.append('dimension', params.dimension);
+      const from = params?.from || params?.fromDate;
+      const to = params?.to || params?.toDate;
+      if (from) searchParams.append('from', from);
+      if (to) searchParams.append('to', to);
+      if (params?.type) searchParams.append('type', params.type);
+      if (params?.category_id) searchParams.append('category_id', String(params.category_id));
+      if (params?.search) searchParams.append('search', params.search);
+      if (params?.has_receipt !== undefined) searchParams.append('has_receipt', String(params.has_receipt));
+
+      const { data } = await api.get(`/reports/breakdown?${searchParams.toString()}`);
       return data;
     },
   });

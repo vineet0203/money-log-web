@@ -106,7 +106,7 @@ export default function CategoriesManager() {
       key: 'budget_limit',
       header: 'Budget Limit',
       render: (row) => (
-        <span className="text-slate-600 font-medium">
+        <span className="text-slate-600 font-medium font-mono text-xs">
           {row.budget_limit ? `$${parseFloat(row.budget_limit).toFixed(2)}` : 'No Limit'}
         </span>
       )
@@ -117,28 +117,32 @@ export default function CategoriesManager() {
       render: (row) => {
         const spent = parseFloat(row.spent_this_month || '0');
         const budget = row.budget_limit ? parseFloat(row.budget_limit) : null;
-        let colorClass = "text-slate-900";
-        if (budget && spent > budget) colorClass = "text-red-500 font-bold";
-        
-        return <span className={colorClass}>${spent.toFixed(2)}</span>;
+        const isOver = budget && spent > budget;
+        return (
+          <span className={`font-mono text-xs ${isOver ? 'text-rose-600 font-bold' : 'text-slate-700 font-semibold'}`}>
+            ${spent.toFixed(2)}
+          </span>
+        );
       }
     },
     {
       key: 'actions',
       header: 'Actions',
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           <button 
             onClick={() => handleOpenModal(row)}
-            className="p-2 text-slate-400 hover:text-[#159A1D] hover:bg-[#E7F8F0] rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+            title="Edit category"
           >
-            <Edit2 size={16} />
+            <Edit2 size={15} />
           </button>
           <button 
             onClick={() => handleDelete(row.id)}
-            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Delete category"
           >
-            <Trash2 size={16} />
+            <Trash2 size={15} />
           </button>
         </div>
       )
@@ -146,20 +150,32 @@ export default function CategoriesManager() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end mb-4">
-        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-          <Plus size={18} />
-          Add Category
-        </Button>
-      </div>
+    <div className="space-y-6 pb-12">
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-100 overflow-hidden">
+        {/* Table Header */}
+        <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-slate-800">Categories & Budgets</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Manage spending categories, color tags, and monthly budget limits</p>
+          </div>
+          <Button 
+            size="sm" 
+            onClick={() => handleOpenModal()} 
+            className="shrink-0"
+          >
+            <Plus size={16} className="mr-1.5" />
+            <span>Add Category</span>
+          </Button>
+        </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-0 overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center text-slate-500">Loading categories...</div>
-        ) : (
-          <DataTable columns={columns} data={categories} />
-        )}
+        {/* DataTable */}
+        <div className="p-0">
+          <DataTable 
+            columns={columns} 
+            data={categories} 
+            isLoading={isLoading} 
+          />
+        </div>
       </div>
 
       <Modal

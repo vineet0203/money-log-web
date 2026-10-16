@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bell, Minus, Plus, MessageSquareText, Mail, Save, Loader2 } from 'lucide-react';
+import { Bell, Minus, Plus, MessageSquareText, Mail, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useGetProfile } from '@/hooks/queries/user';
 import { useUpdateSubscription } from '@/hooks/queries/subscriptions';
 import { useSnackbar } from 'notistack';
@@ -112,33 +113,33 @@ export function RemindersSettings({ subscriptionId, initialSettings, billingCycl
   );
 
   return (
-    <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 flex flex-col gap-6">
+    <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-100 flex flex-col gap-6">
       
       {/* Header: Enable Reminders & Save Button */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#FFF9E6] text-[#F59E0B] flex items-center justify-center">
-            <Bell size={18} strokeWidth={2.5} />
+          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <Bell size={16} strokeWidth={2.5} />
           </div>
-          <span className="font-extrabold text-slate-800 text-base">Enable Reminders</span>
+          <span className="font-bold text-slate-800 text-sm sm:text-base">Enable Reminders</span>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <ToggleSwitch enabled={remindersEnabled} onChange={handleToggleReminders} />
-          <button 
+          <Button 
+            size="sm"
             onClick={handleSave}
-            disabled={updateMutation.isPending}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#159A1D] text-white text-sm font-bold shadow-sm hover:bg-[#118218] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            loading={updateMutation.isPending}
+            leftIcon={<Save size={15} />}
           >
-            {updateMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             Save
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Conditional Sub-settings Area */}
       {remindersEnabled && (
-        <div className="bg-slate-50/80 rounded-2xl p-5 border border-slate-100 flex flex-col gap-6">
+        <div className="bg-slate-50/70 rounded-xl p-4 sm:p-5 border border-slate-100 flex flex-col gap-5">
           {/* Days Before Expiry */}
           <div className="flex items-center justify-between">
             <span className="font-bold text-slate-700 text-sm">Days Before Expiry</span>

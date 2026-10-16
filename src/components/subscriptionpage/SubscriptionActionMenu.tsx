@@ -82,7 +82,9 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
 
   return (
     <>
-      <Menu items={menuItems} />
+      <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center justify-end">
+        <Menu items={menuItems} />
+      </div>
 
       {/* Confirmation Modal */}
       <Modal

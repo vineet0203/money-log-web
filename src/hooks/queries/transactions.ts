@@ -99,6 +99,44 @@ export const useGetTransactions = (filters?: TransactionFilterParams) => {
   });
 };
 
+export interface TransactionRecordSummary {
+  id: number;
+  title: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category_name: string;
+  date: string;
+}
+
+export interface TransactionStatsAggregate {
+  income: number;
+  expense: number;
+  balance: number;
+  highestExpense: number;
+  count: number;
+  incomeCount: number;
+  expenseCount: number;
+  average: number;
+  incomeAverage: number;
+  expenseAverage: number;
+  largest: TransactionRecordSummary | null;
+  smallest: TransactionRecordSummary | null;
+}
+
+export interface TransactionStatsDelta {
+  income: number | null;
+  expense: number | null;
+  balance: number | null;
+  count: number | null;
+  average: number | null;
+}
+
+export interface TransactionStatsResponse extends TransactionStatsAggregate {
+  current: TransactionStatsAggregate;
+  previous: TransactionStatsAggregate | null;
+  delta: TransactionStatsDelta | null;
+}
+
 export const useGetTransactionStats = (filters?: {
   fromDate?: string;
   toDate?: string;
@@ -106,10 +144,11 @@ export const useGetTransactionStats = (filters?: {
   category_id?: number | string;
   search?: string;
   has_receipt?: boolean | string;
+  compare?: 'previous';
 }) => {
   return useQuery({
     queryKey: ['transactionStats', filters],
-    queryFn: async () => {
+    queryFn: async (): Promise<TransactionStatsResponse> => {
       const params = new URLSearchParams();
       if (filters?.fromDate) params.append('fromDate', filters.fromDate);
       if (filters?.toDate) params.append('toDate', filters.toDate);
@@ -117,6 +156,7 @@ export const useGetTransactionStats = (filters?: {
       if (filters?.category_id) params.append('category_id', String(filters.category_id));
       if (filters?.search) params.append('search', filters.search);
       if (filters?.has_receipt !== undefined) params.append('has_receipt', String(filters.has_receipt));
+      if (filters?.compare) params.append('compare', filters.compare);
       const { data } = await api.get(`/transactions/stats?${params.toString()}`);
       return data;
     },

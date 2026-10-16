@@ -1,27 +1,44 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
-import { DailyExpenseStatCard } from '@/components/dailyexpensepage/DailyExpenseStatCard';
 import { BalanceOverviewChart } from '@/components/balancepage/BalanceOverviewChart';
 import { BalanceSummaryList } from '@/components/balancepage/BalanceSummaryList';
-import { DataTable, Column } from '@/components/ui/DataTable';
-import { SingleDatePicker } from '@/components/ui/SingleDatePicker';
-import { Search, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import {
+  DataTable,
+  Column,
+  StatCard,
+  SearchInput,
+  Button,
+  StatusBadge,
+  SkeletonCard,
+  SingleDatePicker,
+} from '@/components/ui';
+import { Scale, ArrowDownCircle, ArrowUpCircle, Plus, Paperclip } from 'lucide-react';
 import { useGetTransactions, useGetTransactionStats } from '@/hooks/queries/transactions';
 import { TransactionActionMenu } from '@/components/transactions/TransactionActionMenu';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonCard, SkeletonTable } from '@/components/ui/Skeleton';
 
 export default function TotalBalanceTrackingPage() {
+  const router = useRouter();
   const { setHeaderData } = useAppData();
-  
+
   // Default to current month YYYY-MM
   const currentMonthStr = useMemo(() => new Date().toISOString().substring(0, 7), []);
   const [selectedDate, setSelectedDate] = useState(currentMonthStr);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     setHeaderData("Total Balance Tracking", "Review your balance, cash flow, and recent activity.");
@@ -40,18 +57,19 @@ export default function TotalBalanceTrackingPage() {
     };
   }, [selectedDate]);
 
-  // Query real stats
+  // Query real stats with previous period comparison
   const { data: stats, isLoading: statsLoading } = useGetTransactionStats({
     fromDate,
     toDate,
-    search: search.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
+    compare: 'previous',
   });
 
   // Query real transactions
   const { data: txData, isLoading: txLoading } = useGetTransactions({
     fromDate,
     toDate,
-    search: search.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
     page,
     limit: itemsPerPage,
   });
@@ -64,16 +82,39 @@ export default function TotalBalanceTrackingPage() {
   const totalIncome = Number(stats?.income || 0);
   const totalExpense = Number(stats?.expense || 0);
   const highestExpense = Number(stats?.highestExpense || 0);
+  const largestTransaction = stats?.largest;
 
   const columns: Column<any>[] = [
     {
-      header: "Title",
+      header: "Title & Notes",
       key: "title",
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-900">{row.title}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900 text-xs sm:text-sm">{row.title}</span>
+            {row.subscription_id && (
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200/70"
+                title="Linked to recurring payment"
+              >
+                Recurring
+              </span>
+            )}
+            {row.receipt_url && (
+              <a
+                href={row.receipt_url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[#159A1D] hover:text-[#118218] p-0.5 inline-flex items-center transition-colors"
+                title="View receipt"
+              >
+                <Paperclip size={13} />
+              </a>
+            )}
+          </div>
           {row.description && (
-            <span className="text-xs text-slate-400 font-normal truncate max-w-xs">
+            <span className="text-xs text-slate-400 font-normal truncate max-w-xs mt-0.5">
               {row.description}
             </span>
           )}
@@ -86,9 +127,14 @@ export default function TotalBalanceTrackingPage() {
       render: (row) => {
         const d = new Date(row.date);
         return (
-          <span className="text-[#849AB4] font-medium text-sm">
-            {d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-          </span>
+          <div className="flex flex-col text-xs text-slate-700">
+            <span className="font-semibold text-slate-800">
+              {d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+            </span>
+            <span className="text-[10.5px] text-slate-400 font-medium">
+              {d.toLocaleDateString('en-US', { weekday: 'short' })}
+            </span>
+          </div>
         );
       },
     },
@@ -96,7 +142,7 @@ export default function TotalBalanceTrackingPage() {
       header: "Category",
       key: "category",
       render: (row) => (
-        <span className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
           {row.category_name || 'Uncategorized'}
         </span>
       ),
@@ -104,24 +150,16 @@ export default function TotalBalanceTrackingPage() {
     {
       header: "Type",
       key: "type",
-      render: (row) =>
-        row.type === 'income' ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#159A1D]">
-            <ArrowDownCircle size={14} /> Income
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-500">
-            <ArrowUpCircle size={14} /> Expense
-          </span>
-        ),
+      render: (row) => <StatusBadge status={row.type || 'expense'} />,
     },
     {
       header: "Amount",
       key: "amount",
+      className: "text-right",
       render: (row) => (
         <span
-          className={`font-bold text-sm ${
-            row.type === 'income' ? 'text-[#159A1D]' : 'text-slate-900'
+          className={`font-mono font-bold text-sm text-right block ${
+            row.type === 'income' ? 'text-emerald-600' : 'text-slate-900'
           }`}
         >
           {row.type === 'income' ? '+' : '-'}${Number(row.amount).toFixed(2)}
@@ -130,39 +168,82 @@ export default function TotalBalanceTrackingPage() {
     },
     {
       header: "Action",
-      key: "id",
-      render: (row) => <TransactionActionMenu transaction={row} />,
+      key: "action",
+      className: "text-right",
+      render: (row) => (
+        <div className="flex justify-end">
+          <TransactionActionMenu transaction={row} />
+        </div>
+      ),
     },
   ];
 
   return (
-    <div className="flex flex-col gap-6 md:gap-8 max-w-[1600px] w-full pb-12">
+    <div className="flex flex-col space-y-6 max-w-[1600px] w-full pb-12">
       {/* Top Stats Row */}
       {statsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <DailyExpenseStatCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
             title="Net Cash Flow"
             value={`${netBalance >= 0 ? '+' : '-'}$${Math.abs(netBalance).toFixed(2)}`}
-            valueColor={netBalance >= 0 ? 'text-[#159A1D]' : 'text-slate-900'}
-            subtext="for selected period"
+            subtitle="Period net cash movement"
+            icon={Scale}
+            color={netBalance >= 0 ? 'green' : 'rose'}
+            delta={
+              stats?.delta?.balance !== null && stats?.delta?.balance !== undefined
+                ? {
+                    value: stats.delta.balance,
+                    isGood: stats.delta.balance >= 0,
+                    label: 'vs previous period',
+                  }
+                : undefined
+            }
           />
-          <DailyExpenseStatCard
-            title="Total Income"
+          <StatCard
+            title="Total Inflows"
             value={`+$${totalIncome.toFixed(2)}`}
-            valueColor="text-[#159A1D]"
-            subtext="for selected period"
+            subtitle="Recorded cash inflows"
+            icon={ArrowDownCircle}
+            color="emerald"
+            delta={
+              stats?.delta?.income !== null && stats?.delta?.income !== undefined
+                ? {
+                    value: stats.delta.income,
+                    isGood: stats.delta.income >= 0,
+                    label: 'vs previous period',
+                  }
+                : undefined
+            }
           />
-          <DailyExpenseStatCard
-            title="Total Expenses"
+          <StatCard
+            title="Total Outflows"
             value={`-$${totalExpense.toFixed(2)}`}
-            valueColor="text-red-500"
-            subtext="for selected period"
+            subtitle="Recorded cash outflows"
+            icon={ArrowUpCircle}
+            color="rose"
+            delta={
+              stats?.delta?.expense !== null && stats?.delta?.expense !== undefined
+                ? {
+                    value: stats.delta.expense,
+                    isGood: stats.delta.expense <= 0,
+                    label: 'vs previous period',
+                  }
+                : undefined
+            }
+          />
+          <StatCard
+            title="Highest Outflow"
+            value={highestExpense > 0 ? `-$${highestExpense.toFixed(2)}` : '$0.00'}
+            subtitle={largestTransaction ? `${largestTransaction.title} (${largestTransaction.category_name})` : 'Peak expense transaction'}
+            icon={Scale}
+            color="amber"
           />
         </div>
       )}
@@ -174,22 +255,23 @@ export default function TotalBalanceTrackingPage() {
         </div>
         <div className="xl:col-span-1">
           <BalanceSummaryList
-            income={totalIncome}
-            expense={totalExpense}
-            balance={netBalance}
-            highestExpense={highestExpense}
+            fromDate={fromDate}
+            toDate={toDate}
             isLoading={statsLoading}
           />
         </div>
       </div>
 
       {/* Bottom Section: Recent Transactions */}
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden flex flex-col">
         {/* Table Header Controls */}
-        <div className="px-6 md:px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <h2 className="text-xl font-bold text-slate-900">Recent Transactions</h2>
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h3 className="font-bold text-slate-800 text-base">Recent Transactions</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Comprehensive audit log of cash movements and categorizations.</p>
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-3">
             <SingleDatePicker
               type="month"
               date={selectedDate}
@@ -201,50 +283,39 @@ export default function TotalBalanceTrackingPage() {
               }}
             />
 
-            <div className="relative w-full sm:w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search transactions..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D] transition-all font-medium placeholder:text-slate-400"
-              />
-            </div>
+            <SearchInput
+              placeholder="Search transactions..."
+              value={search}
+              onChange={setSearch}
+              className="w-56"
+            />
+
+            <Button
+              size="sm"
+              onClick={() => router.push('/transactions/new')}
+              className="flex items-center gap-2"
+            >
+              <Plus size={16} /> Add Transaction
+            </Button>
           </div>
         </div>
 
         {/* Table Body */}
         <div className="p-0">
-          {txLoading ? (
-            <div className="p-6">
-              <SkeletonTable rows={5} columns={6} />
-            </div>
-          ) : transactions.length === 0 ? (
-            <EmptyState
-              title="No transactions found"
-              description="There are no income or expense transactions recorded for the selected period."
-              actionText="Log Transaction"
-              actionHref="/transactions/new"
-              compact={false}
-            />
-          ) : (
-            <DataTable
-              data={transactions}
-              columns={columns}
-              pagination={{
-                currentPage: page,
-                totalPages,
-                totalItems,
-                itemsPerPage,
-                onPageChange: setPage,
-                itemName: 'transactions',
-              }}
-            />
-          )}
+          <DataTable
+            data={transactions}
+            columns={columns}
+            isLoading={txLoading}
+            emptyMessage="No transactions found for the selected period."
+            pagination={{
+              currentPage: page,
+              totalPages,
+              totalItems,
+              itemsPerPage,
+              itemName: 'transactions',
+              onPageChange: setPage,
+            }}
+          />
         </div>
       </div>
     </div>

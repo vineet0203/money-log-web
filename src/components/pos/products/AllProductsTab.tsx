@@ -183,7 +183,7 @@ export function AllProductsTab() {
       header: 'Actions',
       className: 'text-right',
       render: (product) => (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => handleEdit(product)}
             title="Edit product"
@@ -329,7 +329,7 @@ export function AllProductsTab() {
               />
             </div>
 
-            <div className="w-40">
+            <div className="w-44">
               <Select
                 size="sm"
                 value={filters.brand}

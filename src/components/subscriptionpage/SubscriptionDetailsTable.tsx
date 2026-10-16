@@ -1,21 +1,38 @@
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { DataTable, Column } from '@/components/ui/DataTable';
-import { useGetSubscriptions } from '@/hooks/queries/subscriptions';
+import { Tabs } from '@/components/ui/Tabs';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { Button } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useGetSubscriptions, useGetSubscriptionStats } from '@/hooks/queries/subscriptions';
 import { useGetCategories } from '@/hooks/queries/categories';
 import { SubscriptionActionMenu } from './SubscriptionActionMenu';
 import { SubscriptionLogo } from '@/components/ui/SubscriptionLogo';
 import { Select } from '@/components/ui/Select';
 import { useRouter } from 'next/navigation';
 import { formatRecurrenceFrequency } from '@/lib/recurrenceFormatters';
-import { Zap, AlertCircle } from 'lucide-react';
+import { Zap, AlertCircle, Plus, ListFilter, PlayCircle, Clock, PauseCircle } from 'lucide-react';
 
-export function SubscriptionDetailsTable() {
+interface SubscriptionDetailsTableProps {
+  onAddSubscription?: () => void;
+}
+
+export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDetailsTableProps) {
   const [activeTab, setActiveTab] = useState('All');
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const itemsPerPage = 8;
   const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Reset page when tab changes
   const handleTabChange = (tab: string) => {
@@ -23,8 +40,22 @@ export function SubscriptionDetailsTable() {
     setPage(1);
   };
 
-  const { data: response, isLoading } = useGetSubscriptions(page, itemsPerPage, activeTab, categoryId);
+  const { data: response, isLoading } = useGetSubscriptions(
+    page,
+    itemsPerPage,
+    activeTab,
+    categoryId,
+    debouncedSearch
+  );
+  const { data: stats } = useGetSubscriptionStats();
   const { data: categories = [] } = useGetCategories();
+
+  const tabs = [
+    { id: 'All', label: 'All Payments', icon: ListFilter, count: stats?.total_count ? Number(stats.total_count) : undefined },
+    { id: 'Ongoing', label: 'Active', icon: PlayCircle, count: stats?.ongoing_count ? Number(stats.ongoing_count) : undefined },
+    { id: 'Upcoming', label: 'Due Soon', icon: Clock, count: stats?.upcoming_count ? Number(stats.upcoming_count) : undefined },
+    { id: 'Inactive', label: 'Inactive', icon: PauseCircle, count: stats?.inactive_count ? Number(stats.inactive_count) : undefined },
+  ];
 
   // Transform backend data for the DataTable
   const tableData = (response?.data || []).map(sub => {
@@ -55,16 +86,16 @@ export function SubscriptionDetailsTable() {
       render: (row) => (
         <div className="flex items-center gap-3">
           <SubscriptionLogo name={row.name} />
-          <div className="flex flex-col">
-            <span className="text-slate-900 font-semibold">{row.name}</span>
-            <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="flex flex-col min-w-0">
+            <span className="text-slate-900 font-semibold text-sm truncate">{row.name}</span>
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               {row.autoPost && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-100">
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
                   <Zap className="w-2.5 h-2.5" /> Auto-post
                 </span>
               )}
               {row.missedCount > 0 && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-100">
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
                   <AlertCircle className="w-2.5 h-2.5" /> {row.missedCount} missed
                 </span>
               )}
@@ -77,26 +108,28 @@ export function SubscriptionDetailsTable() {
       key: 'category',
       header: 'Category',
       render: (row) => (
-        <span className="text-[#849AB4] font-medium">{row.category}</span>
+        <span className="text-slate-600 font-medium text-xs">{row.category}</span>
       )
     },
     {
       key: 'type',
       header: 'Type',
       render: (row) => (
-        <span className={`px-2 py-1 rounded-md text-xs font-bold capitalize ${row.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-          {row.type}
-        </span>
+        <StatusBadge
+          status={row.type === 'income' ? 'success' : 'danger'}
+          label={row.type}
+          size="sm"
+        />
       )
     },
     {
       key: 'dueDate',
       header: 'Next Due Date',
       render: (row) => (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[#849AB4] text-sm leading-none">{row.dueDate}</span>
-          <span className={`text-xs font-bold leading-none ${row.daysLeft <= 1 ? 'text-[#EF4444]' : 'text-[#159A1D]'}`}>
-            {row.daysLeft < 0 ? `${Math.abs(row.daysLeft)} days overdue` : `In ${row.daysLeft} ${row.daysLeft === 1 ? 'Day' : 'Days'}`}
+        <div className="flex flex-col gap-1">
+          <span className="text-slate-700 text-xs font-semibold leading-none">{row.dueDate}</span>
+          <span className={`text-[11px] font-bold leading-none ${row.daysLeft < 0 ? 'text-rose-600' : row.daysLeft <= 7 ? 'text-amber-600' : 'text-[#159A1D]'}`}>
+            {row.daysLeft < 0 ? `${Math.abs(row.daysLeft)} days overdue` : `In ${row.daysLeft} ${row.daysLeft === 1 ? 'day' : 'days'}`}
           </span>
         </div>
       )
@@ -105,9 +138,9 @@ export function SubscriptionDetailsTable() {
       key: 'amount',
       header: 'Amount / Cadence',
       render: (row) => (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-slate-900 font-bold leading-none">{row.amount}</span>
-          <span className="text-xs text-[#849AB4] leading-none">{row.frequencyLabel}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-slate-900 font-bold font-mono text-sm leading-none">{row.amount}</span>
+          <span className="text-[11px] text-slate-400 leading-none">{row.frequencyLabel}</span>
         </div>
       )
     },
@@ -115,18 +148,15 @@ export function SubscriptionDetailsTable() {
       key: 'status',
       header: 'Status',
       render: (row) => {
-        let colorClasses = 'bg-[#E7F8F0] text-[#159A1D] border-[#C5ECD9]'; // Ongoing/Default
-        
-        if (row.status === 'Inactive') {
-          colorClasses = 'bg-red-50 text-red-600 border-red-200';
-        } else if (row.status === 'Upcoming') {
-          colorClasses = 'bg-orange-50 text-orange-600 border-orange-200';
-        }
-
+        const variant =
+          row.status === 'Inactive' ? 'neutral' :
+          row.status === 'Upcoming' ? 'warning' : 'success';
         return (
-          <span className={`px-3 py-1 rounded-md text-xs font-bold border ${colorClasses}`}>
-            {row.status}
-          </span>
+          <StatusBadge
+            status={variant}
+            label={row.status}
+            size="sm"
+          />
         );
       }
     },
@@ -146,32 +176,30 @@ export function SubscriptionDetailsTable() {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-      {/* Header */}
-      <div className="p-6 pb-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-900">All Recurring Payments</h2>
-      </div>
+    <div className="bg-white rounded-2xl shadow-xs border border-slate-100 flex flex-col overflow-hidden">
+      {/* Card Tabs Header */}
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={handleTabChange}
+        variant="card"
+        standalone={false}
+      />
 
-      {/* Tabs and Filter */}
-      <div className="px-6 border-b border-slate-100 flex items-center justify-between">
-        <div className="flex gap-2">
-          {['All', 'Ongoing', 'Upcoming', 'Inactive'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`px-8 py-2 text-sm font-semibold rounded-t-lg transition-colors border-b-[3px] ${
-                activeTab === tab 
-                  ? 'bg-slate-100 text-slate-900 border-[#159A1D]' 
-                  : 'text-[#849AB4] border-transparent hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+      {/* Filter and Search Bar */}
+      <div className="p-3.5 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
+        <div className="w-full sm:w-72">
+          <SearchInput
+            value={searchInput}
+            onChange={setSearchInput}
+            onClear={() => setSearchInput('')}
+            placeholder="Search payments by name..."
+            sizeVariant="sm"
+          />
         </div>
-        
-        <div className="py-2 w-48">
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
           <Select 
+            size="sm"
             value={categoryId}
             onChange={(val) => {
               setCategoryId(val);
@@ -181,8 +209,18 @@ export function SubscriptionDetailsTable() {
               { value: 'all', label: 'All Categories' },
               ...categories.map(cat => ({ value: cat.id.toString(), label: cat.name }))
             ]}
-            className="!py-2 !px-3 !rounded-lg !bg-slate-50 border-slate-200"
+            className="w-full sm:w-48"
           />
+          {onAddSubscription && (
+            <Button
+              size="sm"
+              onClick={onAddSubscription}
+              className="shrink-0"
+              leftIcon={<Plus size={15} />}
+            >
+              Add Recurring Payment
+            </Button>
+          )}
         </div>
       </div>
 

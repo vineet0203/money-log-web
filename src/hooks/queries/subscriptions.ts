@@ -109,12 +109,18 @@ interface GetOccurrencesResponse {
   };
 }
 
-export const useGetSubscriptions = (page: number = 1, limit: number = 8, status: string = 'All', categoryId: string = 'all') => {
+export const useGetSubscriptions = (
+  page: number = 1,
+  limit: number = 8,
+  status: string = 'All',
+  categoryId: string = 'all',
+  search?: string
+) => {
   return useQuery({
-    queryKey: ['subscriptions', page, limit, status, categoryId],
+    queryKey: ['subscriptions', page, limit, status, categoryId, search],
     queryFn: async () => {
       const { data } = await api.get<GetSubscriptionsResponse>('/subscriptions', {
-        params: { page, limit, status, category_id: categoryId }
+        params: { page, limit, status, category_id: categoryId, search: search?.trim() || undefined }
       });
       return data;
     },

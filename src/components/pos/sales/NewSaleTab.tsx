@@ -1002,17 +1002,16 @@ export default function NewSaleTab() {
             Scan with a handheld laser scanner or manually type the product barcode / SKU code below:
           </p>
 
-          <div className="relative">
-            <ScanBarcode size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              autoFocus
-              placeholder="e.g. 890123328331 or ESP-250G"
-              value={scanModalInput}
-              onChange={e => setScanModalInput(e.target.value)}
-              className="w-full pl-10 pr-3 py-2.5 text-sm font-mono border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
-            />
-          </div>
+          <PosSearchInput
+            autoFocus
+            leftIcon={ScanBarcode}
+            sizeVariant="md"
+            placeholder="e.g. 890123328331 or ESP-250G"
+            value={scanModalInput}
+            onChange={setScanModalInput}
+            inputClassName="font-mono"
+            className="w-full"
+          />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <Button

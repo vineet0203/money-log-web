@@ -35,38 +35,38 @@ export default function SubscriptionDetailsPage() {
   const { subscription } = data;
   const isIncome = subscription.type === 'income';
 
-  const OverviewRow = ({ icon: Icon, label, value, iconBg = "bg-[#EEF2F6]", iconColor = "text-[#637381]" }: any) => (
-    <div className="flex items-center justify-between py-4 border-b border-slate-100 last:border-0">
-      <div className="flex items-center gap-4">
-        <div className={`w-9 h-9 rounded-full ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
-          <Icon size={18} strokeWidth={2.5} />
+  const OverviewRow = ({ icon: Icon, label, value, iconBg = "bg-slate-100", iconColor = "text-slate-600" }: any) => (
+    <div className="flex items-center justify-between py-3.5 border-b border-slate-100 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-xl ${iconBg} ${iconColor} flex items-center justify-center shrink-0`}>
+          <Icon size={16} strokeWidth={2} />
         </div>
-        <span className="font-bold text-slate-500 text-sm">{label}</span>
+        <span className="font-medium text-slate-500 text-xs sm:text-sm">{label}</span>
       </div>
-      <span className="font-extrabold text-slate-800 text-sm text-right">{value}</span>
+      <span className="font-semibold text-slate-800 text-xs sm:text-sm text-right">{value}</span>
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-6 w-full pb-12">
       {/* Top Header Card */}
-      <div className="bg-white rounded-[24px] p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6 flex-wrap">
-        <div className="flex items-center gap-5 min-w-[200px]">
+      <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4 min-w-[200px]">
           <div className="flex-shrink-0">
             <SubscriptionLogo name={subscription.name} />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-extrabold text-slate-900">{subscription.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{subscription.name}</h2>
               {subscription.auto_post ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
                   <Zap className="w-3 h-3" /> Auto-post
                 </span>
               ) : null}
             </div>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-xl font-extrabold text-[#159A1D]">${parseFloat(subscription.amount).toFixed(2)}</span>
-              <span className="text-xs font-bold text-slate-400 capitalize">· {formatRecurrenceFrequency(subscription)}</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-lg sm:text-xl font-bold font-mono text-[#159A1D]">${parseFloat(subscription.amount).toFixed(2)}</span>
+              <span className="text-xs font-medium text-slate-400 capitalize">· {formatRecurrenceFrequency(subscription)}</span>
             </div>
           </div>
         </div>
@@ -75,8 +75,8 @@ export default function SubscriptionDetailsPage() {
       {/* Grid Layout for Overview and Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Main Details Card (Overview) */}
-        <div className="bg-white rounded-[24px] p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col">
-          <h3 className="text-lg font-extrabold text-slate-800 mb-2 px-1">Overview</h3>
+        <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-100 flex flex-col">
+          <h3 className="text-base font-bold text-slate-800 mb-1">Overview</h3>
           
           <div className="flex flex-col px-1">
             <OverviewRow 

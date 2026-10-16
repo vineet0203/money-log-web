@@ -8,3 +8,5 @@ export * from './PosReceipt';
 export { printThermalReceipt } from '@/lib/posPrint';
 export { Select, type SelectOption } from '@/components/ui/Select';
 export { DataTable, type Column } from '@/components/ui/DataTable';
+export { Menu, type MenuItemType, type MenuProps } from '@/components/ui/Menu';
+export { DateRangePicker, type DateRangePickerProps } from '@/components/ui/DateRangePicker';

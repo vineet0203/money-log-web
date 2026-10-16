@@ -14,6 +14,8 @@ import {
 } from '@/hooks/queries/subscriptions';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { Button } from '@/components/ui/button';
 
 interface OccurrenceTimelineProps {
   subscriptionId: string | number;
@@ -100,49 +102,18 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
   };
 
   const getStatusBadge = (status: RecurringOccurrence['status']) => {
-    switch (status) {
-      case 'paid':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-[#E7F8F0] text-[#159A1D] border border-[#C5ECD9]">
-            <CheckCircle2 className="w-3 h-3" /> Paid
-          </span>
-        );
-      case 'due':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            <Calendar className="w-3 h-3" /> Due
-          </span>
-        );
-      case 'missed':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-red-50 text-red-600 border border-red-200">
-            <AlertCircle className="w-3 h-3" /> Missed
-          </span>
-        );
-      case 'skipped':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
-            <SkipForward className="w-3 h-3" /> Skipped
-          </span>
-        );
-      case 'cancelled':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-slate-100 text-slate-400">
-            Cancelled
-          </span>
-        );
-    }
+    return <StatusBadge status={status} size="sm" />;
   };
 
   return (
-    <div className="bg-white rounded-[24px] p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col gap-5">
+    <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-100 flex flex-col gap-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
-          <h3 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-[#159A1D]" />
             Recurring Occurrences Timeline
           </h3>
-          <p className="text-xs font-semibold text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5">
             Materialized due dates, payment records, and schedule status.
           </p>
         </div>
@@ -202,7 +173,7 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-4">
-                  <div className="font-extrabold text-base text-slate-900">
+                  <div className="font-bold font-mono text-sm sm:text-base text-slate-900">
                     ${parseFloat(occ.amount).toFixed(2)}
                   </div>
 
@@ -210,36 +181,36 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                   <div className="flex items-center gap-2">
                     {(occ.status === 'due' || occ.status === 'missed') && (
                       <>
-                        <button
-                          type="button"
+                        <Button
+                          variant="outline"
+                          size="xs"
                           onClick={() => handleSkip(occ.id)}
-                          disabled={skipOccurrence.isPending}
-                          className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-all shadow-xs"
+                          loading={skipOccurrence.isPending}
                         >
                           Skip
-                        </button>
-                        <button
-                          type="button"
+                        </Button>
+                        <Button
+                          size="xs"
                           onClick={() => handleOpenPayModal(occ)}
-                          disabled={payOccurrence.isPending}
-                          className="px-4 py-1.5 text-xs font-bold rounded-xl bg-[#159A1D] hover:bg-[#118218] text-white shadow-sm transition-all flex items-center gap-1.5"
+                          loading={payOccurrence.isPending}
+                          leftIcon={<CreditCard className="w-3.5 h-3.5" />}
                         >
-                          <CreditCard className="w-3.5 h-3.5" />
                           Pay
-                        </button>
+                        </Button>
                       </>
                     )}
 
                     {occ.status === 'paid' && isLatestPaid && (
-                      <button
-                        type="button"
+                      <Button
+                        variant="danger"
+                        size="xs"
                         onClick={handleUndo}
-                        disabled={undoPayment.isPending}
-                        className="px-3 py-1.5 text-xs font-bold rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-600 transition-all flex items-center gap-1.5 shadow-xs"
+                        loading={undoPayment.isPending}
+                        leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
+                        className="!bg-rose-50 !text-rose-600 hover:!bg-rose-100 !border !border-rose-200"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" />
                         Undo
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

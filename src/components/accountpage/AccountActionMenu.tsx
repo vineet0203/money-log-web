@@ -38,7 +38,9 @@ export function AccountActionMenu({ accountId, provider }: Props) {
 
   return (
     <>
-      <Menu items={menuItems} />
+      <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center justify-end">
+        <Menu items={menuItems} />
+      </div>
 
       {/* Disconnect Confirmation Modal */}
       <Modal

@@ -31,7 +31,7 @@ export function BalanceOverviewChart({ from, to }: BalanceOverviewChartProps) {
   }
 
   const { data: seriesData, isLoading } = useGetSeriesReport({
-    metric: 'net',
+    metric: 'cumulative_net',
     from: defaultFrom,
     to: defaultTo,
   });
@@ -50,8 +50,8 @@ export function BalanceOverviewChart({ from, to }: BalanceOverviewChartProps) {
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Balance Overview</h2>
-          <p className="text-xs font-semibold text-slate-400 mt-0.5">Net Cash Flow Trend</p>
+          <h2 className="text-xl font-bold text-slate-900">Cumulative Net Cash Flow</h2>
+          <p className="text-xs font-semibold text-slate-400 mt-0.5">Running sum of income − expense</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           {changePct !== null && (

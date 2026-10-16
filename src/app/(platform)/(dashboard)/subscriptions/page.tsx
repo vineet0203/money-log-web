@@ -3,13 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
-import { SubscriptionStatCard } from '@/components/subscriptionpage/SubscriptionStatCard';
-import { AddSubscriptionCard } from '@/components/subscriptionpage/AddSubscriptionCard';
+import { StatCard } from '@/components/ui/StatCard';
 import { SubscriptionDetailsTable } from '@/components/subscriptionpage/SubscriptionDetailsTable';
 import { AddSubscriptionModal } from '@/components/subscriptionpage/AddSubscriptionModal';
 import { CatchUpPanel } from '@/components/subscriptionpage/CatchUpPanel';
 import { useGetSubscriptionStats, useGetCatchUpOccurrences } from '@/hooks/queries/subscriptions';
-import { AlertCircle, ChevronRight, Sparkles } from 'lucide-react';
+import { AlertCircle, ChevronRight, RefreshCw, Calendar, BellOff } from 'lucide-react';
 
 export default function SubscriptionsPage() {
   const { setHeaderData } = useAppData();
@@ -59,16 +58,41 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* Top Stats & Actions Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <SubscriptionStatCard title="Active Payments" value={ongoingCount.toString().padStart(2, '0')} theme="green" />
-        <SubscriptionStatCard title="Due Within 7 Days" value={upcomingCount.toString().padStart(2, '0')} theme="orange" />
-        <SubscriptionStatCard title="Inactive Payments" value={inactiveCount.toString().padStart(2, '0')} theme="red" />
-        <AddSubscriptionCard onClick={() => setIsAddModalOpen(true)} />
+      {/* Top Stats Row: 4 Symmetrical StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard 
+          title="Active Payments" 
+          value={ongoingCount.toString().padStart(2, '0')} 
+          color="green"
+          icon={RefreshCw}
+          subtitle="Currently running schedules"
+        />
+        <StatCard 
+          title="Due Within 7 Days" 
+          value={upcomingCount.toString().padStart(2, '0')} 
+          color="amber"
+          icon={Calendar}
+          subtitle="Upcoming renewal dates"
+        />
+        <StatCard 
+          title="Overdue / Missed" 
+          value={missedCount.toString().padStart(2, '0')} 
+          color="rose"
+          icon={AlertCircle}
+          subtitle={missedCount > 0 ? "Click to review and catch up" : "All payments up to date"}
+          onClick={missedCount > 0 ? () => setIsCatchUpOpen(true) : undefined}
+        />
+        <StatCard 
+          title="Inactive Payments" 
+          value={inactiveCount.toString().padStart(2, '0')} 
+          color="slate"
+          icon={BellOff}
+          subtitle="Paused or cancelled"
+        />
       </div>
 
       {/* Subscription Details Table */}
-      <SubscriptionDetailsTable />
+      <SubscriptionDetailsTable onAddSubscription={() => setIsAddModalOpen(true)} />
 
       {/* Add Subscription Modal with Recurrence Builder */}
       <AddSubscriptionModal 

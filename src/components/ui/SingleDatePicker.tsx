@@ -58,8 +58,8 @@ export function SingleDatePicker({ date, onChange, className = '', type = 'date'
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-4 py-2 bg-white border rounded-lg text-sm font-bold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 ${
-          isOpen ? 'border-[#159A1D]' : 'border-slate-200 text-slate-700'
+        className={`flex items-center gap-2 px-3.5 h-[38px] bg-white border rounded-xl text-xs sm:text-sm font-medium shadow-2xs transition-all hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 cursor-pointer ${
+          isOpen ? 'border-[#159A1D] ring-2 ring-[#159A1D]/20' : 'border-slate-200 text-slate-700'
         } ${className}`}
       >
         <CalendarIcon size={16} className={isOpen ? 'text-[#159A1D]' : 'text-slate-500'} />

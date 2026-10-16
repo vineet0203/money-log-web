@@ -130,6 +130,7 @@ export function ProductWiseReport({ dateRange = '30days' }: ProductWiseReportPro
             {/* Category Filter */}
             <div className="w-48">
               <Select
+                size="sm"
                 value={selectedCategory}
                 onChange={(val) => setSelectedCategory(val)}
                 options={categories.map(c => ({ value: c, label: c === 'All' ? 'All Categories' : c }))}

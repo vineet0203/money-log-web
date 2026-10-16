@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   CheckCircle2,
   Check,
-  Search,
   Plus
 } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -944,16 +943,13 @@ export default function SalesHistoryTab() {
                     </div>
 
                     {/* Replacement Search */}
-                    <div className="relative">
-                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Search replacement products & variants..."
-                        value={productSearch}
-                        onChange={e => setProductSearch(e.target.value)}
-                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#159A1D]"
-                      />
-                    </div>
+                    <PosSearchInput
+                      sizeVariant="xs"
+                      placeholder="Search replacement products & variants..."
+                      value={productSearch}
+                      onChange={setProductSearch}
+                      className="w-full"
+                    />
 
                     {/* Search Results Dropdown / Picker */}
                     {productSearch.trim() && catalogProducts.length > 0 && (

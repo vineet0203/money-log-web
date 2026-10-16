@@ -306,6 +306,173 @@ Two options:
 
 ---
 
+## 3A. Finance stats — transaction management
+
+**Scope:** `transactions`, `categories`, `subscriptions` only. Accounts/Plaid stats and POS stats are **out of scope** — see §0.2 and §0.1.
+
+**This section lists only what changes.** Anything already working in `dashboardController.getOverview` or `transactionController.getStats` and not mentioned below stays as it is.
+
+### 3A.0 Already in place — do not rebuild
+
+`GET /api/dashboard/overview` already returns: income/expense for today, week, month, year; net profit daily/monthly/yearly; income-vs-expense 6-month series; spending-by-category (top 6, current month); 5 recent transactions; upcoming subscriptions (7-day count); budget vs spent (top 6).
+
+`GET /api/transactions/stats` already accepts `fromDate`, `toDate`, `type`, `category_id`, `search`, `has_receipt` and returns income/expense totals.
+
+### 3A.1 Endpoint changes
+
+Three endpoints serve every stat on every finance screen. **Do not add a bespoke endpoint per widget** — that is how cards end up disagreeing with each other.
+
+**CHANGE — `GET /api/transactions/stats`**
+
+| Change | Detail |
+|---|---|
+| Add `compare=previous` | Returns the same aggregate for the immediately preceding window of equal length. Response becomes `{ current: {...}, previous: {...} \| null, delta: {...} \| null }`. **This is the highest-value change in this section** — it turns every existing static card into a comparison. |
+| Add to the aggregate | `count`, `average` (per type), `largest` and `smallest` (each with the row's `id`, `title`, `category_name`, `date`) |
+| Honour every filter | The stat cards above a filtered table must use the same filter params as the table. They can currently disagree, which makes both untrustworthy. |
+| `previous: null` | When there is no preceding data, return `null` rather than zeros — the UI needs to distinguish "no comparison" from "0% change". |
+
+**NEW — `GET /api/reports/series`**
+
+Replaces the three bespoke chart endpoints implied by §3.2. Params: `metric` (`income` \| `expense` \| `net` \| `cumulative_net`), `granularity` (`day` \| `week` \| `month`), `fromDate`, `toDate`, optional `category_id`. Returns `{ points: [{ period, amount }], total, previous_total }`.
+
+`cumulative_net` is the running sum of income − expense across the window — the honest replacement for the balance-trend chart (§3A.5).
+
+**NEW — `GET /api/reports/breakdown`**
+
+Params: `dimension` (`category` \| `day_of_week` \| `recurrence`), plus the shared filter set. Returns per-group `{ key, label, color, current, previous, delta, share }`.
+
+- `category` → the pie/bar breakdowns **and** month-on-month category movement, from one query
+- `day_of_week` → `DAYOFWEEK(date)` spending pattern
+- `recurrence` → recurring (`subscription_id IS NOT NULL`) vs one-off split
+
+**CHANGE — `GET /api/dashboard/overview`**
+
+| Change | Detail |
+|---|---|
+| **REMOVE** `totalBalance` | It is derived from `accounts` (cash − card debt), which is out of scope. A "total balance" counting only manually logged transactions is misleading and cannot be fixed without account linking. See decision §3A.7.1. |
+| **ADD** `savingsRate` | For the current month |
+| **ADD** `commitments` block | Monthly committed outflow, committed as % of income, due-next-7 and due-next-30 each as **count + amount** (today only a 7-day count exists; the amount matters more) |
+| **ADD** `budgetHealth` roll-up | `{ overLimit, nearLimit, totalBudget, totalSpent }` — the per-category bars exist, the one-line summary does not |
+| **ADD** `projection` | Average daily spend and projected month-end spend |
+| **ADD** `dataQuality` | Uncategorised count, receipt coverage % |
+| **ADD** deltas | Month-on-month delta on the income, expense and net figures already returned |
+
+**Shared filter contract** — all four endpoints take the same params, validated per §5 with the date range capped (≤ 2 years) and pagination capped. Same param names, same semantics, everywhere.
+
+### 3A.2 Metric definitions
+
+Define each once, server-side. The frontend must not recompute any of these — two implementations of "savings rate" will disagree eventually.
+
+**Base** (from `transactions` over a window + filters)
+
+| Metric | Definition |
+|---|---|
+| Income / Expense | `SUM(amount)` where `type` matches |
+| Net | income − expense |
+| Count / Average | `COUNT(*)` / `AVG(amount)`, per type |
+| Largest / Smallest | `MAX`/`MIN(amount)` with the owning row's identity |
+| Delta | `(current − previous) / previous`; `null` when previous is 0 or absent |
+
+**Derived**
+
+| Metric | Definition | Notes |
+|---|---|---|
+| Savings rate | `(income − expense) / income` | `null` when income is 0 — never render ∞ or −100% |
+| Average daily spend | MTD expense ÷ days elapsed in month | Elapsed, not total — otherwise it reads low all month |
+| Projected month-end spend | average daily spend × days in month | Enables warning during the month rather than reporting after |
+| Recurring share | recurring expense ÷ total expense, where recurring is `subscription_id IS NOT NULL` | Shows what is actually discretionary |
+| Uncategorised count | `category_id IS NULL` | Data-quality nudge; makes every breakdown trustworthy |
+| Receipt coverage | expenses with a receipt ÷ expense count | Uses the existing `has_receipt` filter |
+| Transactions per week | count ÷ weeks in window | Explains whether a total moved on volume or on size |
+| Category share | category total ÷ window total | |
+| Category movement | per-category current vs previous window | The most actionable breakdown available — "Food up 34%" |
+| Days logged | `COUNT(DISTINCT date)` | |
+
+**Commitments** (from `subscriptions`)
+
+| Metric | Definition |
+|---|---|
+| Monthly committed outflow | active expense rules, normalised to monthly (`yearly ÷ 12`; after §2, derive from `frequency` + `interval_count`) |
+| Committed as % of income | above ÷ monthly income |
+| Due next 7 / 30 days | count **and** summed amount from `next_billing_date` (after §2: from occurrence `due_date`) |
+| Expected vs received income | income rules due this month vs income transactions actually recorded against them |
+| Missed / overdue | exact only once occurrences exist (§2.3) — do not approximate it before then |
+
+**Note for §2:** once occurrences are materialized, every commitment metric above should read from `recurring_occurrences`, not from the `next_billing_date` pointer. Build them against the pointer now only if §3A ships before §2; otherwise wait and build once.
+
+### 3A.3 Screen changes
+
+Marked **ADD** / **CHANGE** / **REMOVE** relative to what is on screen today.
+
+**Dashboard** (`(dashboard)/dashboard/page.tsx`)
+
+| Card | Action |
+|---|---|
+| `TotalBalanceCard` | **REMOVE** (account-derived — §3A.1) |
+| Income MTD, Expense MTD | **CHANGE** — add month-on-month delta |
+| Net / `netProfit` | **CHANGE** — add delta; keep daily/monthly/yearly |
+| Savings rate | **ADD** — primary row, replacing the removed balance card |
+| Committed outflow, Due in 30 days, Projected month-end | **ADD** — secondary row |
+| Budget health roll-up ("3 of 8 over limit") | **ADD** — above the existing per-category bars |
+| `IncomeVsExpensesChart`, `SpendingByCategoryChart`, `RecentTransactionsCard`, `SubscriptionsBillsCard`, `UpcomingBillsCard`, `BudgetOverviewCard` | Keep — repoint to the new endpoints where their data moves |
+| `GoalsTrackingCard` | **REMOVE** — already decided in §3.1 (no goals table) |
+
+**Transactions** (`transactions/page.tsx`)
+
+| Element | Action |
+|---|---|
+| Stat row: income, expense, net, count | **ADD** — and they must honour the active filter (§3A.1) |
+| Daily sparkline above the table | **ADD** — `/reports/series` at `granularity=day` |
+| Recurring vs one-off share | **ADD** — `/reports/breakdown?dimension=recurrence` |
+
+**Income** (`transactions/income/page.tsx`) — currently mock (§3.1)
+
+Cards: total, average, largest, month-on-month growth %. Charts: monthly trend, by category (**blocked** on §3.4), expected vs received this month. The source-vs-category question in §3.4 gates `IncomeBySourceChart` and nothing else — the rest of the page can ship first.
+
+**Expenses** (`overview/expenses/page.tsx`) — currently mock (§3.1)
+
+Cards: total, average daily, largest, over-budget category count. Charts: daily trend, by category with share %, day-of-week pattern.
+
+**Balance** (`overview/balance/page.tsx`) — currently mock (§3.1)
+
+`BalanceOverviewChart` **CHANGE** → cumulative net cash flow (`metric=cumulative_net`), relabelled accordingly. `BalanceSummaryList` **CHANGE** → category breakdown. See §3A.5 for why this is not a balance chart.
+
+### 3A.4 Rules
+
+1. **One definition, one place.** Every metric above is computed server-side. No frontend arithmetic beyond formatting.
+2. **Cards obey the filter.** Any stat displayed above a filtered list uses that list's filters. No exceptions.
+3. **Zero vs no-data.** `0` is a real value and renders as a formatted zero. An absent comparison renders as no delta at all — not "0%", and not "—" in a position that looks like a value (UI guidelines §10).
+4. **Deltas need direction and meaning.** Expense up is bad, income up is good. Colour follows the *interpretation*, not the sign. Never colour a delta red purely because the number rose.
+5. **Formatting via the shared formatters** (UI guidelines §9): currency from settings, `tabular-nums`, money right-aligned in tables.
+6. **All four states** on every stat card and chart (UI guidelines §10). A stat card gets a skeleton, not a spinner.
+7. **Percentages:** one decimal, and never render a ratio whose denominator is 0.
+
+### 3A.5 Not building — and why
+
+| Not building | Reason |
+|---|---|
+| **Balance over time** | Not derivable. `transactions` has no `account_id` (§0.2) and `accounts.balance` is a snapshot overwritten on each sync with no history. Replaced by cumulative net cash flow, explicitly labelled as logged flow rather than balance. A real balance trend would need a daily snapshot table — out of scope while accounts are. |
+| **Top merchants** | Manual transactions have `title` only; there is no merchant field. Would need a `merchant` column plus autocomplete to be worth anything. |
+| **Time-of-day / hourly spending** | `transactions.date` is a `DATE` with no time component. `created_at` records when the row was *logged*, not when the money moved — a chart built on it would be wrong in a way users cannot see. |
+| **Income by source** | Blocked on §3.4 (category-as-source vs a new field). Gates one chart only. |
+| **Any stat mixing `transactions` with `account_transactions`** | Two separate ledgers; summing them double-counts. |
+
+### 3A.6 Acceptance criteria
+
+- Every stat card on a filtered screen agrees with its table, under every filter combination.
+- Every primary card shows a period-over-period comparison, or no comparison area at all.
+- A new account with no transactions shows formatted zeros and empty states across all four finance screens — no fake rows, no `NaN`, no `Infinity%`.
+- A user with income but zero expenses sees a 100% savings rate, not an error.
+- No metric in §3A.2 is computed in more than one place across both repos.
+
+### 3A.7 Decisions needed
+
+1. **Dashboard headline card** — confirm removing `TotalBalanceCard`, with savings rate taking its slot. (Recommended: yes. The alternative, an all-time net position from logged transactions only, reads as a balance and isn't one.)
+2. **Commitments timing** — build the commitment metrics now against `next_billing_date`, or wait for §2 occurrences and build them once? (Recommended: wait, unless §3A ships well before §2.)
+3. **Savings rate vs expense ratio** — show one, not both. (Recommended: savings rate.)
+
+---
+
 ## 4. Reminders and notifications — email, SMS, push
 
 **Problem.** The reminder pipeline works for the happy path but has a live bug, no retry, no dedupe, and no user-facing control beyond three global booleans.
@@ -570,3 +737,6 @@ Phase 4 and 5 are the two that materially change the product. Phases 1–3 are w
 5. **Recurring naming (§2.1)** — keep "Subscriptions" in the UI, or rename to "Recurring"?
 6. **SMS policy (§4.3)** — confirm SMS stays off by default for all reminder events.
 7. **Notification hour (§4.1)** — fixed 10:00 local, or user-configurable? (Configurable recommended; it's one column.)
+8. **Dashboard headline card (§3A.7)** — confirm removing the account-derived total-balance card.
+9. **Commitment metrics (§3A.7)** — build now against `next_billing_date`, or wait for §2 occurrences?
+10. **Savings rate vs expense ratio (§3A.7)** — confirm showing savings rate only.

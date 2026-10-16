@@ -11,8 +11,14 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  --color-brand-green: #1a8f4c;
-  --color-brand-green-dark: #126937;
+  /* Unified Brand Green Palette */
+  --color-brand: #159a1d;
+  --color-brand-hover: #118218;
+  --color-brand-light: #e7f8f0;
+  --color-brand-border: #c5ecd9;
+
+  --color-brand-green: #159a1d;
+  --color-brand-green-dark: #118218;
   --color-brand-dark: #18191c;
   --color-brand-blue-light: #e6f3ff;
 }
