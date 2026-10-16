@@ -1,72 +1,71 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
-import { useGetSubscriptionDetails } from '@/hooks/queries/subscriptions';
-import { useGetCategories } from '@/hooks/queries/categories';
+import { useGetSubscriptionDetails, SubscriptionData } from '@/hooks/queries/subscriptions';
+import { useGetCategories, Category } from '@/hooks/queries/categories';
 import { useCreateTransaction } from '@/hooks/queries/transactions';
-import { Camera, ChevronDown, Loader2, ArrowLeft } from 'lucide-react';
+import { Camera, ChevronDown, Loader2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useSnackbar } from 'notistack';
 
 // Helper to render dynamic icon
 const DynamicIcon = ({ name, size = 18, color = "currentColor" }: { name: string, size?: number, color?: string }) => {
-  const IconComponent = (LucideIcons as any)[name];
+  const IconComponent = (LucideIcons as unknown as Record<string, React.ComponentType<{ size?: number; color?: string }>>)[name];
   if (!IconComponent) return null;
   return <IconComponent size={size} color={color} />;
 };
 
-export default function SubscriptionPaymentPage() {
+interface PaymentFormInnerProps {
+  id: string;
+  subscription: SubscriptionData;
+  categories?: Category[];
+  occId: string | null;
+  amountParam: string | null;
+  dateParam: string | null;
+}
+
+function PaymentFormInner({
+  id,
+  subscription,
+  categories,
+  occId,
+  amountParam,
+  dateParam,
+}: PaymentFormInnerProps) {
   const { setHeaderData } = useAppData();
-  const params = useParams();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
-  
-  const id = params?.id as string;
-  const { data: subData, isLoading: subLoading } = useGetSubscriptionDetails(id);
-  const { data: categories } = useGetCategories();
   const createTxMutation = useCreateTransaction();
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState<'expense' | 'income'>('expense');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [description, setDescription] = useState('');
+  const initialAmount = amountParam || subscription.amount;
+  const initialDate = dateParam || new Date().toISOString().split('T')[0];
+  const initialDescription = occId
+    ? `Payment for occurrence on ${dateParam || subscription.next_billing_date}`
+    : `Manual ${subscription.type === 'income' ? 'income receipt' : 'payment'} for ${subscription.name}`;
+
+  const [title, setTitle] = useState(subscription.name);
+  const type: 'expense' | 'income' = subscription.type || 'expense';
+  const [categoryId, setCategoryId] = useState<number | null>(subscription.category_id);
+  const [amount, setAmount] = useState<string>(initialAmount);
+  const [date, setDate] = useState<string>(initialDate);
+  const [description, setDescription] = useState(initialDescription);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    // Dynamic header based on loaded subData type
-    const isIncome = subData?.subscription?.type === 'income';
+    const isIncome = type === 'income';
     setHeaderData(
       isIncome ? "Accept Payment" : "Make Payment", 
       isIncome ? "Record an incoming payment for this recurring payment." : "Record a manual payment for this recurring payment.", 
       true
     );
-  }, [setHeaderData, subData]);
+  }, [setHeaderData, type]);
 
-  // Pre-fill form when subscription data loads
-  useEffect(() => {
-    if (subData?.subscription && !title) {
-      setTitle(subData.subscription.name);
-      setType(subData.subscription.type || 'expense');
-      setCategoryId(subData.subscription.category_id);
-      setDescription(`Manual ${subData.subscription.type === 'income' ? 'income receipt' : 'payment'} for ${subData.subscription.name}`);
-    }
-  }, [subData, title]);
-
-  if (subLoading) {
-    return <div className="p-8 text-center text-slate-500">Loading recurring payment details...</div>;
-  }
-
-  if (!subData?.subscription) {
-    return <div className="p-8 text-center text-red-500">Recurring payment not found.</div>;
-  }
-
-  const { subscription } = subData;
-  const amountStr = parseFloat(subscription.amount).toFixed(2);
+  const amountStr = parseFloat(amount || subscription.amount || '0').toFixed(2);
+  const isIncome = type === 'income';
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -84,15 +83,21 @@ export default function SubscriptionPaymentPage() {
       return;
     }
 
+    const payAmount = amount || subscription.amount;
+    if (!payAmount || parseFloat(payAmount) <= 0) {
+      enqueueSnackbar('Please enter a valid amount', { variant: 'error' });
+      return;
+    }
+
     const formData = new FormData();
     formData.append('title', title);
-    formData.append('amount', subscription.amount); // use exact amount from sub
+    formData.append('amount', payAmount);
     formData.append('type', type);
-    // current date YYYY-MM-DD
-    formData.append('date', new Date().toISOString().split('T')[0]);
+    formData.append('date', date || new Date().toISOString().split('T')[0]);
     if (categoryId) formData.append('category_id', categoryId.toString());
     if (description) formData.append('description', description);
     formData.append('subscription_id', subscription.id.toString());
+    if (occId) formData.append('occurrence_id', occId);
     
     if (receiptFile) {
       formData.append('receipt', receiptFile);
@@ -100,11 +105,15 @@ export default function SubscriptionPaymentPage() {
 
     createTxMutation.mutate(formData, {
       onSuccess: () => {
-        enqueueSnackbar('Payment recorded successfully!', { variant: 'success' });
+        enqueueSnackbar(
+          isIncome ? 'Income recorded successfully!' : 'Payment recorded successfully!', 
+          { variant: 'success' }
+        );
         router.replace(`/subscriptions/${id}`);
       },
-      onError: () => {
-        enqueueSnackbar('Failed to record payment.', { variant: 'error' });
+      onError: (err: unknown) => {
+        const axiosError = err as { response?: { data?: { error?: string } } };
+        enqueueSnackbar(axiosError.response?.data?.error || 'Failed to record payment.', { variant: 'error' });
       }
     });
   };
@@ -113,12 +122,17 @@ export default function SubscriptionPaymentPage() {
     <div className="max-w-2xl mx-auto w-full pb-12 flex flex-col items-center">
       
       {/* AMOUNT HEADER */}
-      <div className="flex flex-col items-center justify-center my-8">
+      <div className="flex flex-col items-center justify-center my-6">
         <span className="text-slate-500 font-extrabold text-sm uppercase tracking-wider mb-1">Amount</span>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-extrabold text-slate-800">$</span>
-          <span className="text-5xl font-extrabold text-slate-400/90">{amountStr}</span>
+          <span className="text-5xl font-extrabold text-[#159A1D]">{amountStr}</span>
         </div>
+        {occId && (
+          <span className="text-xs font-semibold text-slate-400 mt-1">
+            Linked to Occurrence #{occId} ({date})
+          </span>
+        )}
       </div>
 
       {/* PAYMENT FORM CARD */}
@@ -136,8 +150,38 @@ export default function SubscriptionPaymentPage() {
           />
         </div>
 
+        {/* AMOUNT & DATE */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Amount ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                }
+              }}
+              className="w-full bg-[#F3F7FA] border-0 rounded-2xl px-5 py-3.5 text-slate-800 font-bold focus:ring-2 focus:ring-[#159A1D]/20 outline-none transition-all"
+              placeholder="0.00"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Payment Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full bg-[#F3F7FA] border-0 rounded-2xl px-5 py-3.5 text-slate-800 font-bold focus:ring-2 focus:ring-[#159A1D]/20 outline-none transition-all"
+            />
+          </div>
+        </div>
+
         {/* TRANSACTION TYPE */}
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="flex flex-col gap-3">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Transaction Type</label>
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-3 cursor-pointer group">
@@ -156,7 +200,7 @@ export default function SubscriptionPaymentPage() {
         </div>
 
         {/* CATEGORY */}
-        <div className="flex flex-col gap-2 mt-2 relative">
+        <div className="flex flex-col gap-2 relative">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
           <div className="relative">
             <select
@@ -172,7 +216,6 @@ export default function SubscriptionPaymentPage() {
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
               <ChevronDown size={20} />
             </div>
-            {/* If category is selected, show its icon over the select box for styling */}
             {categoryId && categories && (
               <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
                 {(() => {
@@ -185,7 +228,6 @@ export default function SubscriptionPaymentPage() {
                 })()}
               </div>
             )}
-            {/* Adjust padding if icon is present */}
             <style jsx>{`
               select { padding-left: ${categoryId ? '3.5rem' : '1.25rem'}; }
             `}</style>
@@ -193,7 +235,7 @@ export default function SubscriptionPaymentPage() {
         </div>
 
         {/* DESCRIPTION */}
-        <div className="flex flex-col gap-2 mt-2">
+        <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Description (Optional)</label>
           <textarea
             value={description}
@@ -205,13 +247,14 @@ export default function SubscriptionPaymentPage() {
         </div>
 
         {/* RECEIPT UPLOAD */}
-        <div className="flex flex-col gap-2 mt-2">
+        <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Receipt (Optional)</label>
           <div 
             onClick={() => fileInputRef.current?.click()}
             className="w-full bg-[#F3F7FA] border-2 border-dashed border-slate-200 rounded-[24px] p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors relative overflow-hidden"
           >
             {receiptPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={receiptPreview} alt="Receipt preview" className="absolute inset-0 w-full h-full object-cover opacity-60" />
             ) : null}
             
@@ -236,13 +279,53 @@ export default function SubscriptionPaymentPage() {
         <button
           type="submit"
           disabled={createTxMutation.isPending}
-          className="w-full bg-[#159A1D] hover:bg-[#118218] text-white rounded-[20px] py-4 mt-4 font-extrabold text-[17px] shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full bg-[#159A1D] hover:bg-[#118218] text-white rounded-[20px] py-4 mt-2 font-extrabold text-[17px] shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {createTxMutation.isPending && <Loader2 size={20} className="animate-spin" />}
-          Pay
+          {isIncome ? 'Record Income' : 'Record Payment'}
         </button>
 
       </form>
     </div>
+  );
+}
+
+function PaymentFormContainer() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const id = params?.id as string;
+  const occId = searchParams.get('occId');
+  const amountParam = searchParams.get('amount');
+  const dateParam = searchParams.get('date');
+
+  const { data: subData, isLoading: subLoading } = useGetSubscriptionDetails(id);
+  const { data: categories } = useGetCategories();
+
+  if (subLoading) {
+    return <div className="p-8 text-center text-slate-500 font-medium">Loading recurring payment details...</div>;
+  }
+
+  if (!subData?.subscription) {
+    return <div className="p-8 text-center text-red-500 font-medium">Recurring payment not found.</div>;
+  }
+
+  return (
+    <PaymentFormInner
+      key={`${subData.subscription.id}-${amountParam || ''}-${dateParam || ''}-${occId || ''}`}
+      id={id}
+      subscription={subData.subscription}
+      categories={categories}
+      occId={occId}
+      amountParam={amountParam}
+      dateParam={dateParam}
+    />
+  );
+}
+
+export default function SubscriptionPaymentPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500 font-medium">Loading payment screen...</div>}>
+      <PaymentFormContainer />
+    </Suspense>
   );
 }

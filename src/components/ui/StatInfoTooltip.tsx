@@ -51,7 +51,7 @@ export const DEFAULT_STAT_INFO: Record<string, string> = {
   'total reminders': 'Total number of automated reminder notifications configured.',
 };
 
-export function resolveStatInfo(title?: string, text?: string, subtitle?: any): string {
+export function resolveStatInfo(title?: string, text?: string, subtitle?: React.ReactNode): string {
   if (text && text.trim()) return text.trim();
   if (!title) return typeof subtitle === 'string' && subtitle ? subtitle : '';
 
@@ -168,7 +168,7 @@ export function resolveStatInfo(title?: string, text?: string, subtitle?: any): 
 export interface StatInfoTooltipProps {
   text?: string;
   title?: string;
-  subtitle?: any;
+  subtitle?: React.ReactNode;
   className?: string;
 }
 

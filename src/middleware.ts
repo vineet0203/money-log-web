@@ -4,9 +4,21 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Emergency killswitch to break out of infinite redirect loops
-  if (searchParams.has('clear')) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
+  const isClearRequested =
+    searchParams.has('clear') || searchParams.has('unauthorized') || searchParams.has('logout');
+
+  // Handle explicit clear/logout request
+  if (isClearRequested) {
+    // If accessing an auth page with clear flag, delete cookies and allow page to render directly
+    if (pathname.startsWith('/login') || pathname.startsWith('/verify-otp')) {
+      const response = NextResponse.next();
+      response.cookies.delete('accessToken');
+      response.cookies.delete('refreshToken');
+      return response;
+    }
+    // If clear was triggered on any other page, redirect to /login and strip cookies
+    const loginUrl = new URL('/login', request.url);
+    const response = NextResponse.redirect(loginUrl);
     response.cookies.delete('accessToken');
     response.cookies.delete('refreshToken');
     return response;
@@ -29,7 +41,12 @@ export function middleware(request: NextRequest) {
     '/payables',
     '/budget',
     '/goals',
-    '/complete-profile'
+    '/complete-profile',
+    '/notifications',
+    '/profile',
+    '/settings',
+    '/account',
+    '/pos'
   ];
   
   const isProtectedRoute = protectedPrefixes.some(prefix => 
@@ -43,7 +60,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Logic 2: Authenticated users trying to access auth pages (login) -> redirect to dashboard
-  if (isAuthRoute && hasToken) {
+  if (isAuthRoute && hasToken && !isClearRequested) {
     const dashboardUrl = new URL('/dashboard', request.url);
     return NextResponse.redirect(dashboardUrl);
   }

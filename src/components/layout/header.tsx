@@ -35,11 +35,16 @@ export function Header() {
       {/* Right side: Actions (Desktop only) */}
       <div className="hidden md:flex items-center gap-3">
         {/* Notification Button */}
-        <Link href="/notifications" className="p-2 bg-white rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors shadow-sm relative block">
-          <Bell size={20} />
-          {/* Notification Dot */}
-          {unreadData?.unreadCount ? (
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#159A1D] rounded-full border-2 border-white" />
+        <Link 
+          href="/notifications" 
+          className="p-2.5 bg-white rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-xs relative flex items-center justify-center"
+          title="Notifications"
+        >
+          <Bell size={18} />
+          {unreadData?.unreadCount && unreadData.unreadCount > 0 ? (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#159A1D] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+              {unreadData.unreadCount > 9 ? '9+' : unreadData.unreadCount}
+            </span>
           ) : null}
         </Link>
       </div>

@@ -62,6 +62,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               }
               props.onWheel?.(e);
             }}
+            onKeyDown={(e) => {
+              if (props.type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                e.preventDefault();
+              }
+              props.onKeyDown?.(e);
+            }}
             {...props}
           />
           {rightIcon && (

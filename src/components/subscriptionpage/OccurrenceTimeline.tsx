@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
-  Calendar, CheckCircle2, AlertCircle, SkipForward,
-  RotateCcw, CreditCard
+  Calendar, RotateCcw, CreditCard, ExternalLink, Receipt
 } from 'lucide-react';
 import {
   useGetOccurrences,
@@ -14,6 +14,7 @@ import {
 } from '@/hooks/queries/subscriptions';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
 
@@ -26,13 +27,16 @@ interface OccurrenceTimelineProps {
 export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
   subscriptionId,
   subscriptionName,
-  defaultAmount
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOccurrence, setSelectedOccurrence] = useState<RecurringOccurrence | null>(null);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payAmount, setPayAmount] = useState<string>('');
   const [payDate, setPayDate] = useState<string>('');
+
+  // Confirmation states
+  const [skipTarget, setSkipTarget] = useState<RecurringOccurrence | null>(null);
+  const [undoConfirmOpen, setUndoConfirmOpen] = useState(false);
 
   const { data, isLoading } = useGetOccurrences(subscriptionId, {
     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -68,20 +72,23 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
     }
   };
 
-  const handleSkip = async (occId: number) => {
+  const handleConfirmSkip = async () => {
+    if (!skipTarget) return;
     try {
       await skipOccurrence.mutateAsync({
         subscriptionId,
-        occurrenceId: occId
+        occurrenceId: skipTarget.id
       });
+      setSkipTarget(null);
     } catch (err) {
       console.error('Failed to skip occurrence:', err);
     }
   };
 
-  const handleUndo = async () => {
+  const handleConfirmUndo = async () => {
     try {
       await undoPayment.mutateAsync(subscriptionId);
+      setUndoConfirmOpen(false);
     } catch (err) {
       console.error('Failed to undo payment:', err);
     }
@@ -107,9 +114,10 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
 
   return (
     <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-xs border border-slate-100 flex flex-col gap-5">
+      {/* Header and Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
-          <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+          <h3 className="text-base sm:lg font-bold text-slate-800 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-[#159A1D]" />
             Recurring Occurrences Timeline
           </h3>
@@ -164,11 +172,23 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                       </span>
                       {getStatusBadge(occ.status)}
                     </div>
-                    {occ.paid_at && (
-                      <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
-                        Recorded on {new Date(occ.paid_at).toLocaleDateString()}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {occ.paid_at && (
+                        <p className="text-[11px] font-semibold text-slate-400">
+                          Recorded on {new Date(occ.paid_at).toLocaleDateString()}
+                        </p>
+                      )}
+                      {occ.transaction_id && (
+                        <Link
+                          href={`/transactions/${occ.transaction_id}/edit`}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#159A1D] hover:text-[#118218] hover:underline transition-colors"
+                          title="View full transaction details and receipt"
+                        >
+                          <span>Tx #{occ.transaction_id}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -184,15 +204,15 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                         <Button
                           variant="outline"
                           size="xs"
-                          onClick={() => handleSkip(occ.id)}
-                          loading={skipOccurrence.isPending}
+                          onClick={() => setSkipTarget(occ)}
+                          loading={skipOccurrence.isPending && skipTarget?.id === occ.id}
                         >
                           Skip
                         </Button>
                         <Button
                           size="xs"
                           onClick={() => handleOpenPayModal(occ)}
-                          loading={payOccurrence.isPending}
+                          loading={payOccurrence.isPending && selectedOccurrence?.id === occ.id}
                           leftIcon={<CreditCard className="w-3.5 h-3.5" />}
                         >
                           Pay
@@ -204,7 +224,7 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                       <Button
                         variant="danger"
                         size="xs"
-                        onClick={handleUndo}
+                        onClick={() => setUndoConfirmOpen(true)}
                         loading={undoPayment.isPending}
                         leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
                         className="!bg-rose-50 !text-rose-600 hover:!bg-rose-100 !border !border-rose-200"
@@ -220,7 +240,45 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
         </div>
       )}
 
-      {/* Modal for Confirming Occurrence Payment with optional override */}
+      {/* Confirmation Dialog for Skipping Occurrence */}
+      {skipTarget && (
+        <ConfirmDialog
+          isOpen={skipTarget !== null}
+          onClose={() => setSkipTarget(null)}
+          onConfirm={handleConfirmSkip}
+          title="Skip Recurring Occurrence"
+          description={
+            <span>
+              Are you sure you want to skip the occurrence for{' '}
+              <strong className="text-slate-900 font-bold">
+                {formatDate(skipTarget.due_date)}
+              </strong>{' '}
+              (${parseFloat(skipTarget.amount).toFixed(2)})? This cycle will be marked as skipped without recording an expense or income transaction.
+            </span>
+          }
+          confirmText="Yes, Skip"
+          cancelText="Cancel"
+          variant="warning"
+          isLoading={skipOccurrence.isPending}
+        />
+      )}
+
+      {/* Confirmation Dialog for Undoing Payment */}
+      {undoConfirmOpen && (
+        <ConfirmDialog
+          isOpen={undoConfirmOpen}
+          onClose={() => setUndoConfirmOpen(false)}
+          onConfirm={handleConfirmUndo}
+          title="Undo Last Payment"
+          description="Are you sure you want to undo the latest payment? This will revert the occurrence back to due and remove the linked transaction record."
+          confirmText="Yes, Undo Payment"
+          cancelText="Cancel"
+          variant="danger"
+          isLoading={undoPayment.isPending}
+        />
+      )}
+
+      {/* Modal for Recording Occurrence Payment */}
       <Modal
         isOpen={payModalOpen}
         onClose={() => setPayModalOpen(false)}
@@ -239,6 +297,12 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
               step="0.01"
               value={payAmount}
               onChange={e => setPayAmount(e.target.value)}
+              onWheel={e => e.currentTarget.blur()}
+              onKeyDown={e => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
             />
           </div>
@@ -254,6 +318,19 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
             />
           </div>
+
+          {/* Link to Full Payment Form */}
+          {selectedOccurrence && (
+            <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+              <Link
+                href={`/subscriptions/${subscriptionId}/pay?occId=${selectedOccurrence.id}&date=${payDate}&amount=${payAmount}`}
+                className="text-xs font-bold text-[#159A1D] hover:text-[#118218] hover:underline flex items-center gap-2"
+              >
+                <Receipt className="w-4 h-4 shrink-0" />
+                <span>Need to attach receipt photo or custom category? Open Full Payment Form →</span>
+              </Link>
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
             <button

@@ -36,8 +36,8 @@ export function RemindersSettings({ subscriptionId, initialSettings, billingCycl
         return;
       }
       
-      setSmsEnabled(globalSms);
-      setEmailEnabled(globalEmail);
+      setSmsEnabled(Boolean(globalSms));
+      setEmailEnabled(Boolean(globalEmail));
     }
     setRemindersEnabled(enabled);
   };
