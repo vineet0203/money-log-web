@@ -22,7 +22,9 @@ export default function DashboardLayout({
           <main className="flex-1 bg-gray-50 md:rounded-tl-2xl rounded-t-2xl md:rounded-tr-none overflow-hidden relative shadow-2xl flex flex-col mt-2 md:mt-0">
             <div className="flex-1 overflow-y-auto p-4 md:px-8 md:pb-8 md:pt-4 custom-scrollbar">
               <Header />
-              {children}
+              <React.Suspense fallback={<div className="p-8 text-center text-slate-400 font-medium">Loading...</div>}>
+                {children}
+              </React.Suspense>
             </div>
           </main>
         </div>

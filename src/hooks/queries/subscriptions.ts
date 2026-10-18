@@ -30,6 +30,7 @@ export interface SubscriptionData {
   auto_post?: boolean | number;
   start_date: string;
   next_billing_date: string;
+  last_paid_date?: string | null;
   status: 'active' | 'paused' | 'cancelled';
   category_id: number | null;
   category_name: string | null;
@@ -68,9 +69,12 @@ export interface RecurringOccurrence {
   status: 'due' | 'paid' | 'skipped' | 'missed' | 'cancelled';
   transaction_id: number | null;
   paid_at: string | null;
+  skipped_at?: string | null;
   created_at: string;
   updated_at: string;
   transaction_title?: string;
+  transaction_description?: string | null;
+  transaction_date?: string | null;
   transaction_receipt_url?: string | null;
 }
 
@@ -219,6 +223,7 @@ export const useGetOccurrences = (
     status?: string;
     from?: string;
     to?: string;
+    sort?: 'asc' | 'desc';
     page?: number;
     limit?: number;
   }
@@ -272,6 +277,7 @@ export const usePayOccurrence = () => {
       queryClient.invalidateQueries({ queryKey: ['catchUpOccurrences'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactionStats'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
     },
@@ -304,6 +310,36 @@ export const useSkipOccurrence = () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions', String(variables.subscriptionId)] });
       queryClient.invalidateQueries({ queryKey: ['occurrences', String(variables.subscriptionId)] });
       queryClient.invalidateQueries({ queryKey: ['catchUpOccurrences'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+/**
+ * Unskip Occurrence Mutation
+ */
+export const useUnskipOccurrence = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      subscriptionId,
+      occurrenceId
+    }: {
+      subscriptionId: string | number;
+      occurrenceId: number;
+    }) => {
+      const { data } = await api.post(`/subscriptions/${subscriptionId}/occurrences/${occurrenceId}/unskip`);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptions', String(variables.subscriptionId)] });
+      queryClient.invalidateQueries({ queryKey: ['occurrences', String(variables.subscriptionId)] });
+      queryClient.invalidateQueries({ queryKey: ['catchUpOccurrences'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -347,8 +383,10 @@ export const useBulkCatchUp = () => {
       queryClient.invalidateQueries({ queryKey: ['occurrences'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactionStats'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
@@ -371,6 +409,7 @@ export const useUndoSubscriptionPayment = () => {
       queryClient.invalidateQueries({ queryKey: ['catchUpOccurrences'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactionStats'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
     },

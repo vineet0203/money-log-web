@@ -15,10 +15,16 @@ import {
 } from 'lucide-react';
 
 import { PosTabs } from '@/components/pos/common';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 export default function PosProductsManager() {
   const { setHeaderData } = useAppData();
-  const [activeTab, setActiveTab] = useState('All Products');
+  const [activeTab, setActiveTab] = useQueryTab<string>('tab', 'All Products', [
+    'All Products',
+    'Categories',
+    'Brands',
+    'Import / Export'
+  ]);
 
   useEffect(() => {
     setHeaderData("Products & Categories", "Create and maintain your store catalog, pricing, and variants.", false);

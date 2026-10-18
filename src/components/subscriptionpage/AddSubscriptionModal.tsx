@@ -230,7 +230,7 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
           {['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(frequency) && (
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Day of Month (1 - 31)
+                {type === 'income' ? 'Expected Day of Month (1 - 31)' : 'Due Day of Month (1 - 31)'}
               </label>
               <input
                 type="number"
@@ -241,7 +241,7 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
               />
               <p className="text-[11px] font-medium text-slate-400 mt-1">
-                Automatically clamped on shorter months (e.g. 31st becomes 28th/29th in Feb, 30th in Apr).
+                Day of each month on which this {type === 'income' ? 'income is expected' : 'bill is due'} (automatically clamped on shorter months).
               </p>
             </div>
           )}
@@ -249,7 +249,7 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
           {['weekly', 'biweekly'].includes(frequency) && (
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Day of Week
+                {type === 'income' ? 'Expected Day of Week' : 'Due Day of Week'}
               </label>
               <select
                 value={byWeekday}

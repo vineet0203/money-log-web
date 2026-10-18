@@ -13,11 +13,12 @@ import { PosDashboardView } from '@/components/dashboardpage/PosDashboardView';
 import { useGetDashboardOverview } from '@/hooks/queries/dashboard';
 import { Tabs, TabItem } from '@/components/ui/Tabs';
 import { LayoutDashboard, Store } from 'lucide-react';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 export default function DashboardPage() {
   const { setHeaderData } = useAppData();
   const { data: dashboard, isLoading } = useGetDashboardOverview();
-  const [activeTab, setActiveTab] = useState<'finance' | 'pos'>('finance');
+  const [activeTab, setActiveTab] = useQueryTab<'finance' | 'pos'>('tab', 'finance', ['finance', 'pos']);
 
   const format = (val: number) =>
     Math.abs(val).toLocaleString('en-US', { style: 'currency', currency: 'USD' });

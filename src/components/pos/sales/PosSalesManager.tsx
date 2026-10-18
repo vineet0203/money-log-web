@@ -8,10 +8,15 @@ import ReturnsTab from './ReturnsTab';
 
 import { PosTabs } from '@/components/pos/common';
 import { ShoppingCart, Receipt, RotateCcw } from 'lucide-react';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 export default function PosSalesManager() {
   const { setHeaderData } = useAppData();
-  const [activeTab, setActiveTab] = useState('New Sale');
+  const [activeTab, setActiveTab] = useQueryTab<string>('tab', 'New Sale', [
+    'New Sale',
+    'Sales History',
+    'Returns & Refunds',
+  ]);
 
   useEffect(() => {
     setHeaderData("Sales & Returns");

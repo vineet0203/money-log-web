@@ -30,6 +30,18 @@ export default function CategoriesManager() {
     budget_limit: ''
   });
 
+  const sortedCategories = React.useMemo(() => {
+    return [...categories].sort((a, b) => {
+      const spentA = parseFloat(a.spent_this_month || '0');
+      const spentB = parseFloat(b.spent_this_month || '0');
+      if (spentB !== spentA) return spentB - spentA;
+      const budgetA = parseFloat(a.budget_limit || '0');
+      const budgetB = parseFloat(b.budget_limit || '0');
+      if (budgetB !== budgetA) return budgetB - budgetA;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [categories]);
+
   useEffect(() => {
     setHeaderData("Categories Management", "Manage your transaction categories and budgets.", false);
   }, [setHeaderData]);
@@ -172,7 +184,7 @@ export default function CategoriesManager() {
         <div className="p-0">
           <DataTable 
             columns={columns} 
-            data={categories} 
+            data={sortedCategories} 
             isLoading={isLoading} 
           />
         </div>

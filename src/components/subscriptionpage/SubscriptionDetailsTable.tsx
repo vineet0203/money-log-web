@@ -12,13 +12,14 @@ import { Select } from '@/components/ui/Select';
 import { useRouter } from 'next/navigation';
 import { formatRecurrenceFrequency } from '@/lib/recurrenceFormatters';
 import { Zap, AlertCircle, Plus, ListFilter, PlayCircle, Clock, PauseCircle } from 'lucide-react';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 interface SubscriptionDetailsTableProps {
   onAddSubscription?: () => void;
 }
 
 export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDetailsTableProps) {
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useQueryTab<string>('tab', 'All', ['All', 'Ongoing', 'Upcoming', 'Inactive']);
   const [page, setPage] = useState(1);
   const [categoryId, setCategoryId] = useState('all');
   const [searchInput, setSearchInput] = useState('');
@@ -61,12 +62,17 @@ export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDeta
   const tableData = (response?.data || []).map(sub => {
     const d = new Date(sub.next_billing_date);
     const dueDate = `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()}`;
+    const lastPaidDate = sub.last_paid_date
+      ? new Date(sub.last_paid_date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+      : null;
+
     return {
       id: sub.id.toString(),
       name: sub.name,
       type: sub.type || 'expense',
       category: sub.category_name || 'Uncategorized',
       dueDate,
+      lastPaidDate,
       daysLeft: sub.days_left,
       amount: `$${Number(sub.amount).toFixed(2)}`,
       billingCycle: sub.billing_cycle,
@@ -124,15 +130,32 @@ export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDeta
     },
     {
       key: 'dueDate',
-      header: 'Next Due Date',
-      render: (row) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-slate-700 text-xs font-semibold leading-none">{row.dueDate}</span>
-          <span className={`text-[11px] font-bold leading-none ${row.daysLeft < 0 ? 'text-rose-600' : row.daysLeft <= 7 ? 'text-amber-600' : 'text-[#159A1D]'}`}>
-            {row.daysLeft < 0 ? `${Math.abs(row.daysLeft)} days overdue` : `In ${row.daysLeft} ${row.daysLeft === 1 ? 'day' : 'days'}`}
-          </span>
-        </div>
-      )
+      header: 'Due Date',
+      render: (row) => {
+        const isIncome = row.type === 'income';
+        return (
+          <div className="flex flex-col gap-1 min-w-[130px]">
+            <div className="flex items-center gap-1.5">
+              <span className="text-slate-800 text-xs font-bold leading-none">{row.dueDate}</span>
+              <span className={`text-[10.5px] font-bold leading-none ${row.daysLeft < 0 ? 'text-rose-600' : row.daysLeft <= 7 ? 'text-amber-600' : 'text-[#159A1D]'}`}>
+                {row.daysLeft < 0 ? `${Math.abs(row.daysLeft)}d overdue` : `In ${row.daysLeft}d`}
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-400 font-medium leading-tight">
+              {row.lastPaidDate ? (
+                <span>
+                  {isIncome ? 'Last received:' : 'Last paid:'}{' '}
+                  <span className="text-slate-600 font-semibold">{row.lastPaidDate}</span>
+                </span>
+              ) : (
+                <span className="text-slate-400/90 italic">
+                  {isIncome ? 'No income received yet' : 'No prior payment'}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      }
     },
     {
       key: 'amount',

@@ -12,7 +12,8 @@ import {
   CheckCircle2, 
   Clock,
   XCircle, 
-  DollarSign
+  DollarSign,
+  Filter
 } from 'lucide-react';
 import { PosStatCard, PosStatusBadge, PosSearchInput, Select } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
@@ -119,15 +120,16 @@ export function PurchaseOrdersTab({
           </div>
 
           {/* Status Pills */}
-          <div className="flex items-center gap-1 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-lg overflow-x-auto">
+          <div className="h-[38px] flex items-center gap-1 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-xl overflow-x-auto">
+            <Filter size={14} className="text-slate-400 ml-1.5 mr-0.5 shrink-0" />
             {(['All', 'Draft', 'Ordered', 'Partial', 'Received', 'Cancelled'] as const).map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
+                className={`h-full px-3 text-xs font-medium rounded-lg transition-all whitespace-nowrap flex items-center justify-center cursor-pointer ${
                   statusFilter === status
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                    : 'text-slate-500 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 {status}

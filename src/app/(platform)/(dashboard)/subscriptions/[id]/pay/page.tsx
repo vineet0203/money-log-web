@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
-import { useGetSubscriptionDetails, SubscriptionData } from '@/hooks/queries/subscriptions';
+import { useGetSubscriptionDetails, useGetOccurrences, SubscriptionData, RecurringOccurrence } from '@/hooks/queries/subscriptions';
 import { useGetCategories, Category } from '@/hooks/queries/categories';
 import { useCreateTransaction } from '@/hooks/queries/transactions';
 import { Camera, ChevronDown, Loader2 } from 'lucide-react';
@@ -17,6 +17,90 @@ const DynamicIcon = ({ name, size = 18, color = "currentColor" }: { name: string
   return <IconComponent size={size} color={color} />;
 };
 
+const formatDatePretty = (dVal: string | null | undefined) => {
+  if (!dVal) return '';
+  try {
+    const raw = typeof dVal === 'string' ? decodeURIComponent(dVal).trim() : dVal;
+    if (typeof raw === 'string' && (raw.includes('T') || raw.includes(':') || raw.includes(' '))) {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+    }
+
+    const cleanDate = typeof raw === 'string' 
+      ? raw.split('T')[0].split(' ')[0] 
+      : '';
+    const [y, m, d] = cleanDate.split('-').map(Number);
+    if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) {
+      const fallback = new Date(raw);
+      return isNaN(fallback.getTime()) ? String(raw) : fallback.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return String(dVal);
+  }
+};
+
+const generateIntelligentDescription = (
+  pDate: string,
+  dDate: string | null | undefined,
+  subName: string,
+  subType: string,
+  isOcc: boolean,
+  status?: string | null,
+  skippedAt?: string | null
+) => {
+  if (!isOcc || !dDate) {
+    return `Manual ${subType === 'income' ? 'income receipt' : 'payment'} for ${subName}`;
+  }
+
+  const formattedDueDate = formatDatePretty(dDate);
+  const formattedPayDate = formatDatePretty(pDate);
+
+  const cleanDueDateStr = typeof dDate === 'string' ? decodeURIComponent(dDate).split('T')[0].split(' ')[0] : '';
+  const cleanPayDateStr = typeof pDate === 'string' ? decodeURIComponent(pDate).split('T')[0].split(' ')[0] : '';
+  const dueTime = new Date(cleanDueDateStr).getTime();
+  const payTime = new Date(cleanPayDateStr).getTime();
+  const diffDays = Math.round((payTime - dueTime) / (1000 * 60 * 60 * 24));
+
+  const wasSkipped = status === 'skipped' || Boolean(skippedAt);
+
+  if (wasSkipped) {
+    const formattedSkippedDate = formatDatePretty(skippedAt || new Date().toISOString().split('T')[0]);
+
+    let lateText = '';
+    if (diffDays > 0) {
+      lateText = ` (${diffDays} day${diffDays > 1 ? 's' : ''} late)`;
+    } else if (diffDays === 0) {
+      lateText = ` (on scheduled due date)`;
+    } else {
+      const earlyDays = Math.abs(diffDays);
+      lateText = ` (${earlyDays} day${earlyDays > 1 ? 's' : ''} early)`;
+    }
+
+    return `Originally skipped on ${formattedSkippedDate} • Paid on ${formattedPayDate}${lateText} for scheduled due date ${formattedDueDate}`;
+  } else {
+    let lateText = '';
+    if (diffDays > 0) {
+      lateText = ` (${diffDays} day${diffDays > 1 ? 's' : ''} late)`;
+    }
+    return `Payment for recurring occurrence on ${formattedDueDate}${lateText}`;
+  }
+};
+
 interface PaymentFormInnerProps {
   id: string;
   subscription: SubscriptionData;
@@ -24,6 +108,10 @@ interface PaymentFormInnerProps {
   occId: string | null;
   amountParam: string | null;
   dateParam: string | null;
+  dueDateParam?: string | null;
+  statusParam?: string | null;
+  skippedAtParam?: string | null;
+  matchedOcc?: RecurringOccurrence | null;
 }
 
 function PaymentFormInner({
@@ -33,6 +121,10 @@ function PaymentFormInner({
   occId,
   amountParam,
   dateParam,
+  dueDateParam,
+  statusParam,
+  skippedAtParam,
+  matchedOcc,
 }: PaymentFormInnerProps) {
   const { setHeaderData } = useAppData();
   const router = useRouter();
@@ -40,11 +132,23 @@ function PaymentFormInner({
   const createTxMutation = useCreateTransaction();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const initialAmount = amountParam || subscription.amount;
+  const scheduledDueDate = matchedOcc?.due_date || dueDateParam || subscription.next_billing_date;
+  const occStatus = matchedOcc?.status || statusParam || (occId ? 'due' : null);
+  const occSkippedAt = matchedOcc?.skipped_at || skippedAtParam || null;
+  const wasSkipped = occStatus === 'skipped' || Boolean(occSkippedAt);
+
+  const initialAmount = amountParam || (matchedOcc ? matchedOcc.amount : subscription.amount);
   const initialDate = dateParam || new Date().toISOString().split('T')[0];
-  const initialDescription = occId
-    ? `Payment for occurrence on ${dateParam || subscription.next_billing_date}`
-    : `Manual ${subscription.type === 'income' ? 'income receipt' : 'payment'} for ${subscription.name}`;
+
+  const initialDescription = generateIntelligentDescription(
+    initialDate,
+    scheduledDueDate,
+    subscription.name,
+    subscription.type,
+    Boolean(occId),
+    occStatus,
+    occSkippedAt
+  );
 
   const [title, setTitle] = useState(subscription.name);
   const type: 'expense' | 'income' = subscription.type || 'expense';
@@ -52,6 +156,7 @@ function PaymentFormInner({
   const [amount, setAmount] = useState<string>(initialAmount);
   const [date, setDate] = useState<string>(initialDate);
   const [description, setDescription] = useState(initialDescription);
+  const [isManualDescription, setIsManualDescription] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
@@ -63,6 +168,23 @@ function PaymentFormInner({
       true
     );
   }, [setHeaderData, type]);
+
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+    if (!isManualDescription && occId && scheduledDueDate) {
+      setDescription(
+        generateIntelligentDescription(
+          newDate,
+          scheduledDueDate,
+          subscription.name,
+          subscription.type,
+          true,
+          occStatus,
+          occSkippedAt
+        )
+      );
+    }
+  };
 
   const amountStr = parseFloat(amount || subscription.amount || '0').toFixed(2);
   const isIncome = type === 'income';
@@ -122,16 +244,23 @@ function PaymentFormInner({
     <div className="max-w-2xl mx-auto w-full pb-12 flex flex-col items-center">
       
       {/* AMOUNT HEADER */}
-      <div className="flex flex-col items-center justify-center my-6">
+      <div className="flex flex-col items-center justify-center my-6 text-center">
         <span className="text-slate-500 font-extrabold text-sm uppercase tracking-wider mb-1">Amount</span>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-extrabold text-slate-800">$</span>
           <span className="text-5xl font-extrabold text-[#159A1D]">{amountStr}</span>
         </div>
-        {occId && (
-          <span className="text-xs font-semibold text-slate-400 mt-1">
-            Linked to Occurrence #{occId} ({date})
-          </span>
+        {occId && scheduledDueDate && (
+          <div className="flex flex-col items-center gap-1.5 mt-2.5">
+            <span className="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-3 py-1 rounded-full">
+              Linked to Occurrence #{occId} • Scheduled Due Date: <span className="font-bold text-slate-900">{formatDatePretty(scheduledDueDate)}</span>
+            </span>
+            {wasSkipped && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
+                Originally Skipped on {formatDatePretty(occSkippedAt || undefined)}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -174,7 +303,7 @@ function PaymentFormInner({
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
               className="w-full bg-[#F3F7FA] border-0 rounded-2xl px-5 py-3.5 text-slate-800 font-bold focus:ring-2 focus:ring-[#159A1D]/20 outline-none transition-all"
             />
           </div>
@@ -236,12 +365,20 @@ function PaymentFormInner({
 
         {/* DESCRIPTION */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Description (Optional)</label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Description (Optional)</label>
+            {wasSkipped && (
+              <span className="text-[11px] font-semibold text-amber-600">Auto-filled with skip & late details</span>
+            )}
+          </div>
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              setIsManualDescription(true);
+            }}
             rows={3}
-            className="w-full bg-[#F3F7FA] border-0 rounded-2xl px-5 py-4 text-slate-800 font-bold focus:ring-2 focus:ring-[#159A1D]/20 outline-none transition-all resize-none"
+            className="w-full bg-[#F3F7FA] border-0 rounded-2xl px-5 py-4 text-slate-800 font-bold focus:ring-2 focus:ring-[#159A1D]/20 outline-none transition-all resize-none text-sm leading-relaxed"
             placeholder="Add a note..."
           />
         </div>
@@ -297,11 +434,15 @@ function PaymentFormContainer() {
   const occId = searchParams.get('occId');
   const amountParam = searchParams.get('amount');
   const dateParam = searchParams.get('date');
+  const dueDateParam = searchParams.get('dueDate');
+  const statusParam = searchParams.get('status');
+  const skippedAtParam = searchParams.get('skippedAt');
 
   const { data: subData, isLoading: subLoading } = useGetSubscriptionDetails(id);
+  const { data: occData, isLoading: occLoading } = useGetOccurrences(id);
   const { data: categories } = useGetCategories();
 
-  if (subLoading) {
+  if (subLoading || (occId && occLoading)) {
     return <div className="p-8 text-center text-slate-500 font-medium">Loading recurring payment details...</div>;
   }
 
@@ -309,15 +450,23 @@ function PaymentFormContainer() {
     return <div className="p-8 text-center text-red-500 font-medium">Recurring payment not found.</div>;
   }
 
+  const matchedOcc = occId && occData?.data
+    ? occData.data.find((o: RecurringOccurrence) => String(o.id) === String(occId)) || null
+    : null;
+
   return (
     <PaymentFormInner
-      key={`${subData.subscription.id}-${amountParam || ''}-${dateParam || ''}-${occId || ''}`}
+      key={`${subData.subscription.id}-${amountParam || ''}-${dateParam || ''}-${occId || ''}-${matchedOcc?.id || ''}`}
       id={id}
       subscription={subData.subscription}
       categories={categories}
       occId={occId}
       amountParam={amountParam}
       dateParam={dateParam}
+      dueDateParam={dueDateParam}
+      statusParam={statusParam}
+      skippedAtParam={skippedAtParam}
+      matchedOcc={matchedOcc}
     />
   );
 }

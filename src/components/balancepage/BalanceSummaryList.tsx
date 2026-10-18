@@ -70,7 +70,7 @@ export function BalanceSummaryList({
         </div>
       ) : (
         <div className="flex flex-col gap-3.5 overflow-y-auto custom-scrollbar pr-1 flex-1">
-          {items.slice(0, 6).map((item, index) => (
+          {items.map((item, index) => (
             <div key={item.key || index} className="flex flex-col">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
@@ -91,7 +91,7 @@ export function BalanceSummaryList({
                   </span>
                 </div>
               </div>
-              {index < Math.min(items.length, 6) - 1 && (
+              {index < items.length - 1 && (
                 <div className="h-px w-full bg-slate-100 mt-3" />
               )}
             </div>

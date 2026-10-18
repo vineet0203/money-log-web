@@ -19,10 +19,18 @@ import {
 } from 'lucide-react';
 
 import { PosTabs } from '@/components/pos/common';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 export default function PosSuppliersManager() {
   const { setHeaderData } = useAppData();
-  const [activeTab, setActiveTab] = useState<string>('Suppliers');
+  const [activeTab, setActiveTab] = useQueryTab<string>('tab', 'Suppliers', [
+    'Suppliers',
+    'All Purchases',
+    'Create Purchase',
+    'Purchase Orders',
+    'Goods Receiving',
+    'Supplier Payments',
+  ]);
 
   // Inter-tab parameter state
   const [targetSupplierId, setTargetSupplierId] = useState<string | undefined>(undefined);

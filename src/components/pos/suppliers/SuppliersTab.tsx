@@ -17,7 +17,8 @@ import {
   DollarSign,
   Users,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Filter
 } from 'lucide-react';
 import { PosStatCard, PosStatusBadge, PosSearchInput } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
@@ -112,15 +113,16 @@ export function SuppliersTab({
             className="max-w-md"
           />
 
-          <div className="flex items-center gap-1.5 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-lg">
+          <div className="h-[38px] flex items-center gap-1 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-xl overflow-x-auto">
+            <Filter size={14} className="text-slate-400 ml-1.5 mr-0.5 shrink-0" />
             {(['All', 'Active', 'Inactive'] as const).map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                className={`h-full px-3 text-xs font-medium rounded-lg transition-all whitespace-nowrap flex items-center justify-center cursor-pointer ${
                   statusFilter === status
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                    : 'text-slate-500 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 {status}

@@ -26,6 +26,7 @@ import { format, subDays } from 'date-fns';
 import { useAppData } from '@/providers/AppDataProvider';
 import { useGetTransactions, useGetTransactionStats } from '@/hooks/queries/transactions';
 import { TransactionActionMenu } from '@/components/transactions/TransactionActionMenu';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 export default function BalanceTrackerList() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function BalanceTrackerList() {
     };
   });
 
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useQueryTab<string>('tab', 'All', ['All', 'Income', 'Expense']);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);

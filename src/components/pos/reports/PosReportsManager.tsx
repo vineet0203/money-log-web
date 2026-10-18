@@ -25,6 +25,18 @@ import {
 } from 'lucide-react';
 import { PosTabs } from '@/components/pos/common';
 import { Button } from '@/components/ui/button';
+import { useQueryTab } from '@/hooks/useQueryTab';
+
+const VALID_REPORT_TABS: ReportTab[] = [
+  'sales_summary',
+  'product_sales',
+  'category_sales',
+  'profit_margins',
+  'inventory_valuation',
+  'payment_summary',
+  'returns_refunds',
+  'purchase_report',
+];
 
 const DATE_PRESETS: Array<{ id: DateRangePreset; label: string }> = [
   { id: 'today', label: 'Today' },
@@ -37,7 +49,7 @@ const DATE_PRESETS: Array<{ id: DateRangePreset; label: string }> = [
 
 export default function PosReportsManager() {
   const { setHeaderData } = useAppData();
-  const [activeTab, setActiveTab] = useState<ReportTab>('sales_summary');
+  const [activeTab, setActiveTab] = useQueryTab<ReportTab>('tab', 'sales_summary', VALID_REPORT_TABS);
   const [dateRange, setDateRange] = useState<DateRangePreset>('30days');
 
   useEffect(() => {

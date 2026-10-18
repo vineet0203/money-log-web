@@ -27,23 +27,31 @@ export const purchaseLineItemSchema = z.object({
   variantId: z.string().optional(),
   sku: z.string().trim().min(1, 'SKU is required'),
   itemName: z.string().trim().min(1, 'Item name is required'),
-  unit: z.string().trim().default('pcs'),
+  unit: z.string().trim().min(1, 'Unit is required').default('pcs'),
   orderedQty: z.coerce.number().min(1, 'Quantity must be at least 1'),
-  unitCost: z.coerce.number().min(0, 'Cost price cannot be negative'),
-  taxPercent: z.coerce.number().min(0, 'Tax percentage cannot be negative').max(100, 'Tax cannot exceed 100%'),
+  unitCost: z.coerce.number().min(0.01, 'Cost price must be greater than $0'),
+  taxPercent: z.coerce.number().min(0, 'Tax percentage cannot be negative').max(100, 'Tax cannot exceed 100%').default(0),
 });
 
 export const createPurchaseSchema = z.object({
   type: z.enum(['PurchaseOrder', 'DirectBill']),
-  supplierId: z.string().min(1, 'Please select a supplier'),
-  date: z.string().min(1, 'Date is required'),
-  dueDateOrExpectedDate: z.string().min(1, 'Target date is required'),
+  supplierId: z.string().trim().min(1, 'Please select a supplier'),
+  date: z.string().trim().min(1, 'Bill date is required'),
+  dueDateOrExpectedDate: z.string().trim().min(1, 'Payment due date is required'),
   supplierInvoiceNo: z.string().trim().optional().default(''),
   paymentTerms: z.enum(['Due on Receipt', 'Net 15', 'Net 30', 'Net 60', 'Cash on Delivery']),
   shippingFee: z.coerce.number().min(0, 'Shipping fee must be 0 or more').default(0),
   discount: z.coerce.number().min(0, 'Discount must be 0 or more').default(0),
-  items: z.array(purchaseLineItemSchema).min(1, 'Add at least one line item'),
+  items: z.array(purchaseLineItemSchema).min(1, 'At least one line item is required in the purchase bill'),
   notes: z.string().trim().optional().default(''),
+}).refine(data => {
+  if (data.date && data.dueDateOrExpectedDate) {
+    return new Date(data.dueDateOrExpectedDate) >= new Date(data.date);
+  }
+  return true;
+}, {
+  message: 'Payment due date cannot be earlier than bill date',
+  path: ['dueDateOrExpectedDate'],
 });
 
 export type CreatePurchaseFormData = z.infer<typeof createPurchaseSchema>;

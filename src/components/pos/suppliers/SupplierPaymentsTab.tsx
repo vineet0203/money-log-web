@@ -148,16 +148,16 @@ export function SupplierPaymentsTab({
             className="flex-1 min-w-[220px]"
           />
 
-          <div className="flex items-center gap-1 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-lg overflow-x-auto">
-            <Filter size={14} className="text-slate-400 ml-1.5" />
+          <div className="h-[38px] flex items-center gap-1 shrink-0 bg-slate-50 border border-slate-200 p-1 rounded-xl overflow-x-auto">
+            <Filter size={14} className="text-slate-400 ml-1.5 mr-0.5 shrink-0" />
             {(['All', 'Bank Transfer', 'UPI', 'Cheque', 'Cash', 'Card'] as const).map(method => (
               <button
                 key={method}
                 onClick={() => setMethodFilter(method)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
+                className={`h-full px-3 text-xs font-medium rounded-lg transition-all whitespace-nowrap flex items-center justify-center cursor-pointer ${
                   methodFilter === method
                     ? 'bg-white text-slate-900 shadow-xs font-semibold'
-                    : 'text-slate-500 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 {method}
@@ -167,6 +167,7 @@ export function SupplierPaymentsTab({
         </div>
 
         <Button
+          size="sm"
           onClick={() => {
             setTargetSupplierId(undefined);
             setTargetBillNumber(undefined);

@@ -3,36 +3,45 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Calendar, RotateCcw, CreditCard, ExternalLink, Receipt
+  Calendar, RotateCcw, CreditCard, ExternalLink, Receipt, ArrowUpDown
 } from 'lucide-react';
 import {
   useGetOccurrences,
   usePayOccurrence,
   useSkipOccurrence,
+  useUnskipOccurrence,
   useUndoSubscriptionPayment,
   RecurringOccurrence
 } from '@/hooks/queries/subscriptions';
+import { useGetCategories } from '@/hooks/queries/categories';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 interface OccurrenceTimelineProps {
   subscriptionId: string | number;
   subscriptionName: string;
   defaultAmount?: string | number;
+  defaultCategoryId?: number | null;
 }
 
 export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
   subscriptionId,
   subscriptionName,
+  defaultCategoryId,
 }) => {
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useQueryTab<string>('tab', 'all', ['all', 'due', 'paid', 'missed', 'skipped']);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedOccurrence, setSelectedOccurrence] = useState<RecurringOccurrence | null>(null);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payAmount, setPayAmount] = useState<string>('');
   const [payDate, setPayDate] = useState<string>('');
+  const [payCategoryId, setPayCategoryId] = useState<number | null>(defaultCategoryId || null);
+
+  const { data: categories = [] } = useGetCategories();
 
   // Confirmation states
   const [skipTarget, setSkipTarget] = useState<RecurringOccurrence | null>(null);
@@ -40,19 +49,24 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
 
   const { data, isLoading } = useGetOccurrences(subscriptionId, {
     status: statusFilter !== 'all' ? statusFilter : undefined,
+    sort: sortOrder,
     limit: 50
   });
 
   const payOccurrence = usePayOccurrence();
   const skipOccurrence = useSkipOccurrence();
+  const unskipOccurrence = useUnskipOccurrence();
   const undoPayment = useUndoSubscriptionPayment();
+  const [unskipTarget, setUnskipTarget] = useState<RecurringOccurrence | null>(null);
 
   const occurrences = data?.data || [];
 
   const handleOpenPayModal = (occ: RecurringOccurrence) => {
     setSelectedOccurrence(occ);
     setPayAmount(occ.amount);
-    setPayDate(occ.due_date);
+    // Default payment date to today so the expense accurately counts in the active month
+    setPayDate(new Date().toISOString().split('T')[0]);
+    setPayCategoryId(defaultCategoryId || null);
     setPayModalOpen(true);
   };
 
@@ -63,7 +77,8 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
         subscriptionId,
         occurrenceId: selectedOccurrence.id,
         amount: parseFloat(payAmount),
-        date: payDate
+        date: payDate,
+        category_id: payCategoryId
       });
       setPayModalOpen(false);
       setSelectedOccurrence(null);
@@ -85,6 +100,20 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
     }
   };
 
+  const handleConfirmUnskip = async (occ: RecurringOccurrence) => {
+    setUnskipTarget(occ);
+    try {
+      await unskipOccurrence.mutateAsync({
+        subscriptionId,
+        occurrenceId: occ.id
+      });
+      setUnskipTarget(null);
+    } catch (err) {
+      console.error('Failed to unskip occurrence:', err);
+      setUnskipTarget(null);
+    }
+  };
+
   const handleConfirmUndo = async () => {
     try {
       await undoPayment.mutateAsync(subscriptionId);
@@ -94,9 +123,31 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
     }
   };
 
-  const formatDate = (dStr: string) => {
+  const formatDate = (dStr: string | null | undefined) => {
+    if (!dStr) return '';
     try {
-      const [y, m, d] = dStr.split('-').map(Number);
+      if (typeof dStr === 'string' && (dStr.includes('T') || dStr.includes(':') || dStr.includes(' '))) {
+        const d = new Date(dStr);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+        }
+      }
+      const cleanDate = typeof dStr === 'string' ? dStr.split('T')[0].split(' ')[0] : '';
+      const [y, m, d] = cleanDate.split('-').map(Number);
+      if (!y || !m || !d || isNaN(y) || isNaN(m) || isNaN(d)) {
+        const fallback = new Date(dStr);
+        return isNaN(fallback.getTime()) ? String(dStr) : fallback.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
       return new Date(y, m - 1, d).toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
@@ -104,7 +155,7 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
         year: 'numeric'
       });
     } catch {
-      return dStr;
+      return String(dStr);
     }
   };
 
@@ -126,21 +177,34 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
           </p>
         </div>
 
-        {/* Filter tabs */}
-        <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold gap-1">
-          {['all', 'due', 'paid', 'missed', 'skipped'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
-                statusFilter === tab
-                  ? 'bg-white text-slate-900 shadow-sm font-extrabold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Sort toggle */}
+          <button
+            type="button"
+            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs"
+            title={sortOrder === 'asc' ? 'Currently: Nearest date first. Click for furthest date first' : 'Currently: Furthest date first. Click for nearest date first'}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
+            <span>{sortOrder === 'asc' ? 'Nearest First' : 'Furthest First'}</span>
+          </button>
+
+          {/* Filter tabs */}
+          <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold gap-1">
+            {['all', 'due', 'paid', 'missed', 'skipped'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setStatusFilter(tab)}
+                className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+                  statusFilter === tab
+                    ? 'bg-white text-slate-900 shadow-sm font-extrabold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -156,14 +220,19 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
         </div>
       ) : (
         <div className="space-y-3">
-          {occurrences.map((occ, idx) => {
-            const isLatestPaid = occ.status === 'paid' && !occurrences.slice(0, idx).some(o => o.status === 'paid');
+          {(() => {
+            const latestPaidOccurrence = occurrences
+              .filter(o => o.status === 'paid')
+              .sort((a, b) => new Date(b.due_date).getTime() - new Date(a.due_date).getTime())[0];
 
-            return (
-              <div
-                key={occ.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all gap-3"
-              >
+            return occurrences.map((occ) => {
+              const isLatestPaid = occ.status === 'paid' && latestPaidOccurrence?.id === occ.id;
+
+              return (
+                <div
+                  key={occ.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all gap-3"
+                >
                 <div className="flex items-center gap-3">
                   <div>
                     <div className="flex items-center gap-2.5">
@@ -189,6 +258,41 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                         </Link>
                       )}
                     </div>
+
+                    {occ.status === 'paid' && occ.skipped_at && (
+                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200/80">
+                          Previously Skipped
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          {occ.transaction_description || (
+                            <>
+                              Skipped on {formatDate(occ.skipped_at)} • Paid on {occ.paid_at ? formatDate(occ.paid_at) : 'Paid'}
+                              {(() => {
+                                const dueTime = new Date(occ.due_date).getTime();
+                                const payTime = occ.paid_at ? new Date(occ.paid_at).getTime() : new Date().getTime();
+                                const diffDays = Math.round((payTime - dueTime) / (1000 * 60 * 60 * 24));
+                                if (diffDays > 0) return ` (${diffDays} day${diffDays > 1 ? 's' : ''} late)`;
+                                if (diffDays < 0) return ` (${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''} early)`;
+                                return ' (on due date)';
+                              })()}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                    {occ.status === 'paid' && !occ.skipped_at && occ.transaction_description && (
+                      <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                        {occ.transaction_description}
+                      </p>
+                    )}
+
+                    {occ.status === 'skipped' && occ.skipped_at && (
+                      <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                        Skipped on {formatDate(occ.skipped_at)}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -220,6 +324,27 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                       </>
                     )}
 
+                    {occ.status === 'skipped' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => handleConfirmUnskip(occ)}
+                          loading={unskipOccurrence.isPending && unskipTarget?.id === occ.id}
+                        >
+                          Unskip
+                        </Button>
+                        <Button
+                          size="xs"
+                          onClick={() => handleOpenPayModal(occ)}
+                          loading={payOccurrence.isPending && selectedOccurrence?.id === occ.id}
+                          leftIcon={<CreditCard className="w-3.5 h-3.5" />}
+                        >
+                          Pay
+                        </Button>
+                      </>
+                    )}
+
                     {occ.status === 'paid' && isLatestPaid && (
                       <Button
                         variant="danger"
@@ -236,7 +361,8 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
                 </div>
               </div>
             );
-          })}
+          });
+        })()}
         </div>
       )}
 
@@ -288,6 +414,13 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
         hideFooter={true}
       >
         <div className="space-y-4 pt-2">
+          {selectedOccurrence && (
+            <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs">
+              <span className="text-slate-500 font-medium">Scheduled Due Date:</span>
+              <span className="font-bold text-slate-800">{formatDate(selectedOccurrence.due_date)}</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Payment Amount ($)
@@ -308,9 +441,12 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Payment Date
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Payment Date
+              </label>
+              <span className="text-[10.5px] text-slate-400 font-medium">Defaults to today for accurate period tracking</span>
+            </div>
             <input
               type="date"
               value={payDate}
@@ -319,11 +455,29 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Category
+            </label>
+            <select
+              value={payCategoryId !== null && payCategoryId !== undefined ? String(payCategoryId) : ''}
+              onChange={e => setPayCategoryId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 focus:border-[#159A1D]"
+            >
+              <option value="">No Category</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Link to Full Payment Form */}
           {selectedOccurrence && (
             <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
               <Link
-                href={`/subscriptions/${subscriptionId}/pay?occId=${selectedOccurrence.id}&date=${payDate}&amount=${payAmount}`}
+                href={`/subscriptions/${subscriptionId}/pay?occId=${selectedOccurrence.id}&dueDate=${selectedOccurrence.due_date}&date=${payDate}&amount=${payAmount}&status=${selectedOccurrence.status}&skippedAt=${selectedOccurrence.skipped_at || ''}`}
                 className="text-xs font-bold text-[#159A1D] hover:text-[#118218] hover:underline flex items-center gap-2"
               >
                 <Receipt className="w-4 h-4 shrink-0" />

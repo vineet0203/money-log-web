@@ -21,7 +21,17 @@ interface BudgetOverviewCardProps {
 }
 
 export function BudgetOverviewCard({ budgets = [], budgetHealth }: BudgetOverviewCardProps) {
-  const hasTrackedBudgets = (budgets && budgets.length > 0) || (budgetHealth && budgetHealth.totalBudget > 0);
+  const sortedBudgets = React.useMemo(() => {
+    return [...budgets].sort((a, b) => {
+      const spentDiff = Number(b.spent || 0) - Number(a.spent || 0);
+      if (spentDiff !== 0) return spentDiff;
+      const totalDiff = Number(b.total || 0) - Number(a.total || 0);
+      if (totalDiff !== 0) return totalDiff;
+      return (a.category || '').localeCompare(b.category || '');
+    });
+  }, [budgets]);
+
+  const hasTrackedBudgets = (sortedBudgets && sortedBudgets.length > 0) || (budgetHealth && budgetHealth.totalBudget > 0);
 
   return (
     <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-slate-100 h-full flex flex-col justify-between min-w-0">
@@ -61,13 +71,13 @@ export function BudgetOverviewCard({ budgets = [], budgetHealth }: BudgetOvervie
           </div>
         )}
 
-        <div className="flex-1 flex flex-col gap-4 mt-2">
+        <div className="flex-1 flex flex-col gap-4 mt-2 max-h-[360px] overflow-y-auto pr-1.5 custom-scrollbar">
           {!hasTrackedBudgets ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 py-6 min-h-[140px]">
               <p className="text-xs sm:text-sm font-medium">No spending or limits set this month.</p>
             </div>
           ) : (
-            budgets.map((budget, idx) => {
+            sortedBudgets.map((budget, idx) => {
               const hasLimit = budget.total > 0;
               const percentage = hasLimit
                 ? Math.min(100, Math.round((budget.spent / budget.total) * 100))

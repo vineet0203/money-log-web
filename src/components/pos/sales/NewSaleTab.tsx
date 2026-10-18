@@ -42,170 +42,6 @@ interface ProductVariantGroup {
   variants: PosProductVariant[];
 }
 
-// Fallback demo catalog if database has no active products yet
-const FALLBACK_PRODUCTS: PosProduct[] = [
-  {
-    id: 991,
-    name: 'Artisan Espresso Roast (Reserve)',
-    category_id: 1,
-    category_name: 'Coffee Beans',
-    brand_id: null,
-    brand_name: null,
-    description: 'Medium-dark whole bean roast',
-    base_unit: 'bag',
-    is_taxable: true,
-    tax_rate: null,
-    status: 'active',
-    image_url: null,
-    options_config: [{ name: 'Size', values: ['250g', '1kg'] }],
-    variants_count: 2,
-    total_stock: 45,
-    min_price: 18.50,
-    max_price: 48.00,
-    min_stock_alert: 5,
-    stock_status: 'in_stock',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    variants: [
-      {
-        id: 9911,
-        product_id: 991,
-        title: '250g Reserve Bag',
-        sku: 'COF-250G',
-        barcode: '890102030401',
-        cost_price: 9.00,
-        mrp: 20.00,
-        selling_price: 18.50,
-        stock_quantity: 30,
-        is_active: true,
-      },
-      {
-        id: 9912,
-        product_id: 991,
-        title: '1kg Bulk Roaster Bag',
-        sku: 'COF-1KG',
-        barcode: '890102030402',
-        cost_price: 24.00,
-        mrp: 52.00,
-        selling_price: 48.00,
-        stock_quantity: 15,
-        is_active: true,
-      },
-    ],
-  },
-  {
-    id: 992,
-    name: 'Ceramic Pour-Over Dripper',
-    category_id: 2,
-    category_name: 'Merchandise & Gear',
-    brand_id: null,
-    brand_name: null,
-    description: 'V60 spiral ribbed ceramic cone',
-    base_unit: 'pcs',
-    is_taxable: true,
-    tax_rate: null,
-    status: 'active',
-    image_url: null,
-    options_config: [],
-    variants_count: 1,
-    total_stock: 24,
-    min_price: 24.00,
-    max_price: 24.00,
-    min_stock_alert: 5,
-    stock_status: 'in_stock',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    variants: [
-      {
-        id: 9921,
-        product_id: 992,
-        title: 'Standard Matte White',
-        sku: 'EQP-DRI-01',
-        barcode: '890102030403',
-        cost_price: 12.00,
-        mrp: 28.00,
-        selling_price: 24.00,
-        stock_quantity: 24,
-        is_active: true,
-      },
-    ],
-  },
-  {
-    id: 993,
-    name: 'Oat Milk Barista Edition (1L)',
-    category_id: 3,
-    category_name: 'Beverages',
-    brand_id: null,
-    brand_name: null,
-    description: 'Plant-based microfoam milk for lattes',
-    base_unit: 'bottle',
-    is_taxable: true,
-    tax_rate: null,
-    status: 'active',
-    image_url: null,
-    options_config: [],
-    variants_count: 1,
-    total_stock: 60,
-    min_price: 5.50,
-    max_price: 5.50,
-    min_stock_alert: 10,
-    stock_status: 'in_stock',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    variants: [
-      {
-        id: 9931,
-        product_id: 993,
-        title: '1L Tetra Pak',
-        sku: 'MILK-OAT-1L',
-        barcode: '890102030404',
-        cost_price: 2.80,
-        mrp: 6.50,
-        selling_price: 5.50,
-        stock_quantity: 60,
-        is_active: true,
-      },
-    ],
-  },
-  {
-    id: 994,
-    name: 'Single Origin Ethiopia Yirgacheffe',
-    category_id: 1,
-    category_name: 'Coffee Beans',
-    brand_id: null,
-    brand_name: null,
-    description: 'Floral and citrus notes, washed process',
-    base_unit: 'bag',
-    is_taxable: true,
-    tax_rate: null,
-    status: 'active',
-    image_url: null,
-    options_config: [],
-    variants_count: 1,
-    total_stock: 35,
-    min_price: 22.00,
-    max_price: 22.00,
-    min_stock_alert: 5,
-    stock_status: 'in_stock',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    variants: [
-      {
-        id: 9941,
-        product_id: 994,
-        title: '250g Pouch',
-        sku: 'ETH-YIR-250',
-        barcode: '890102030405',
-        cost_price: 11.50,
-        mrp: 25.00,
-        selling_price: 22.00,
-        stock_quantity: 35,
-        is_active: true,
-      },
-    ],
-  },
-];
-
 export default function NewSaleTab() {
   const { enqueueSnackbar } = useSnackbar();
   const { receiptSettings } = usePosSettings();
@@ -260,17 +96,8 @@ export default function NewSaleTab() {
 
   // Active Catalog List flattened across all loaded pages
   const catalogProducts: PosProduct[] = useMemo(() => {
-    const serverList = infiniteData?.pages.flatMap(page => page.data) || [];
-    if (serverList.length > 0) {
-      return serverList;
-    }
-    if (isProductsLoading) return [];
-    // Fallback demo only if not searching and all categories and server is empty
-    if (!debouncedSearch && activeCategoryId === 'all') {
-      return FALLBACK_PRODUCTS;
-    }
-    return [];
-  }, [infiniteData, isProductsLoading, debouncedSearch, activeCategoryId]);
+    return infiniteData?.pages.flatMap(page => page.data) || [];
+  }, [infiniteData]);
 
   const totalProductsCount = infiniteData?.pages[0]?.pagination?.total ?? catalogProducts.length;
 
@@ -715,9 +542,15 @@ export default function NewSaleTab() {
           ) : filteredProductGroups.length === 0 ? (
             <div className="py-24 text-center text-slate-400 space-y-2">
               <ShoppingBag size={36} className="mx-auto text-slate-300 stroke-[1.5]" />
-              <p className="text-sm font-semibold text-slate-700">No matching products or variants</p>
+              <p className="text-sm font-semibold text-slate-700">
+                {debouncedSearch || activeCategoryId !== 'all'
+                  ? 'No matching products or variants'
+                  : 'No products in catalog yet'}
+              </p>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                No items match your code, barcode, or category search.
+                {debouncedSearch || activeCategoryId !== 'all'
+                  ? 'No items match your code, barcode, or category search.'
+                  : 'Add products and inventory in the Products tab to start selling.'}
               </p>
             </div>
           ) : (

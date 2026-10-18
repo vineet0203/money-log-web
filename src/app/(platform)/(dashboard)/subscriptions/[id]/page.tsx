@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
-import { Calendar, Clock, Repeat, Folder, Zap } from 'lucide-react';
+import { Calendar, Clock, Repeat, Folder, Zap, CheckCircle2 } from 'lucide-react';
 import { RemindersSettings } from '@/components/subscriptionpage/RemindersSettings';
 import { OccurrenceTimeline } from '@/components/subscriptionpage/OccurrenceTimeline';
 import { useGetSubscriptionDetails } from '@/hooks/queries/subscriptions';
@@ -88,10 +88,19 @@ export default function SubscriptionDetailsPage() {
             />
             <OverviewRow 
               icon={Clock} 
-              label={isIncome ? "Next Expected" : "Next Due Date"} 
+              label={isIncome ? "Due / Expected Date" : "Due Date"} 
               value={new Date(subscription.next_billing_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} 
               iconBg="bg-orange-50" 
               iconColor="text-orange-500" 
+            />
+            <OverviewRow 
+              icon={CheckCircle2} 
+              label={isIncome ? "Last Received Date" : "Last Paid Date"} 
+              value={subscription.last_paid_date 
+                ? new Date(subscription.last_paid_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                : "No payments recorded yet"} 
+              iconBg="bg-emerald-50" 
+              iconColor="text-[#159A1D]" 
             />
             <OverviewRow 
               icon={Repeat} 
@@ -138,6 +147,7 @@ export default function SubscriptionDetailsPage() {
           subscriptionId={subscription.id}
           subscriptionName={subscription.name}
           defaultAmount={subscription.amount}
+          defaultCategoryId={subscription.category_id}
         />
       </div>
     </div>

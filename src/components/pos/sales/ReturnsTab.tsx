@@ -28,6 +28,7 @@ import {
 import { useGetPosOrders, useGetPosOrderById, PosOrder } from '@/hooks/queries/posOrders';
 import { useGetPosProducts, PosProduct, PosProductVariant } from '@/hooks/queries/posProducts';
 import { useSnackbar } from 'notistack';
+import { useQueryTab } from '@/hooks/useQueryTab';
 
 export default function ReturnsTab() {
   const { enqueueSnackbar } = useSnackbar();
@@ -35,7 +36,7 @@ export default function ReturnsTab() {
   const currencySymbol = receiptSettings.currencySymbol || '$';
   const returnWindowDays = receiptSettings.returnWindowDays ?? 14;
 
-  const [activeView, setActiveView] = useState<'returns' | 'exchanges'>('returns');
+  const [activeView, setActiveView] = useQueryTab<'returns' | 'exchanges'>('view', 'returns', ['returns', 'exchanges']);
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
   const [processType, setProcessType] = useState<'return' | 'exchange'>('return');
