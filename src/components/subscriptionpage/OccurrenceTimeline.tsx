@@ -19,7 +19,6 @@ import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { useQueryTab } from '@/hooks/useQueryTab';
 
 interface OccurrenceTimelineProps {
   subscriptionId: string | number;
@@ -33,7 +32,7 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
   subscriptionName,
   defaultCategoryId,
 }) => {
-  const [statusFilter, setStatusFilter] = useQueryTab<string>('tab', 'all', ['all', 'due', 'paid', 'missed', 'skipped']);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedOccurrence, setSelectedOccurrence] = useState<RecurringOccurrence | null>(null);
   const [payModalOpen, setPayModalOpen] = useState(false);
