@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Select } from '@/components/ui/Select';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAppData } from '@/providers/AppDataProvider';
 import { useGetCategories } from '@/hooks/queries/categories';
 import { useCreateTransaction, useUpdateTransaction } from '@/hooks/queries/transactions';
@@ -55,6 +56,9 @@ export default function AddTransactionForm({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(transaction?.receipt_url || null);
   const [removeReceipt, setRemoveReceipt] = useState<boolean>(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
+  const [pendingSummary, setPendingSummary] = useState<{ title: string; amount: string; type: string } | null>(null);
 
   const formatInitialDate = (dateVal?: any) => {
     if (!dateVal) return new Date().toISOString().split('T')[0];
@@ -157,30 +161,45 @@ export default function AddTransactionForm({
     }
 
     if (isEdit && transaction?.id) {
-      updateTxMutation.mutate(
-        { id: transaction.id, formData },
-        {
-          onSuccess: () => {
-            enqueueSnackbar('Transaction updated successfully', { variant: 'success' });
-            if (onSuccess) {
-              onSuccess();
-            } else {
-              router.push('/transactions');
-            }
-          },
-          onError: (err: any) => {
-            const msg =
-              err?.response?.data?.error ||
-              err?.response?.data?.message ||
-              'Failed to update transaction';
-            enqueueSnackbar(msg, { variant: 'error' });
-          },
+      setPendingFormData(formData);
+      setPendingSummary({
+        title: data.title,
+        amount: data.amount,
+        type: data.type,
+      });
+      setIsConfirmOpen(true);
+      return;
+    }
+
+    createTxMutation.mutate(formData, {
+      onSuccess: () => {
+        enqueueSnackbar('Transaction created successfully', { variant: 'success' });
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push('/transactions');
         }
-      );
-    } else {
-      createTxMutation.mutate(formData, {
+      },
+      onError: (err: any) => {
+        const msg =
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          'Failed to create transaction';
+        enqueueSnackbar(msg, { variant: 'error' });
+      },
+    });
+  };
+
+  const handleConfirmUpdate = () => {
+    if (!pendingFormData || !transaction?.id) return;
+    updateTxMutation.mutate(
+      { id: transaction.id, formData: pendingFormData },
+      {
         onSuccess: () => {
-          enqueueSnackbar('Transaction created successfully', { variant: 'success' });
+          setIsConfirmOpen(false);
+          setPendingFormData(null);
+          setPendingSummary(null);
+          enqueueSnackbar('Transaction updated successfully', { variant: 'success' });
           if (onSuccess) {
             onSuccess();
           } else {
@@ -191,11 +210,12 @@ export default function AddTransactionForm({
           const msg =
             err?.response?.data?.error ||
             err?.response?.data?.message ||
-            'Failed to create transaction';
+            'Failed to update transaction';
           enqueueSnackbar(msg, { variant: 'error' });
+          setIsConfirmOpen(false);
         },
-      });
-    }
+      }
+    );
   };
 
   const isPdf = previewUrl?.toLowerCase().includes('.pdf') || file?.type === 'application/pdf';
@@ -434,6 +454,59 @@ export default function AddTransactionForm({
           </div>
         </div>
       </div>
+
+      {isEdit && (
+        <ConfirmDialog
+          isOpen={isConfirmOpen}
+          onClose={() => {
+            if (!updateTxMutation.isPending) {
+              setIsConfirmOpen(false);
+            }
+          }}
+          onConfirm={handleConfirmUpdate}
+          title="Save Changes?"
+          description={
+            <div className="space-y-3 mt-1">
+              <p className="text-slate-600 text-sm">
+                Are you sure you want to save the updated details for this transaction?
+              </p>
+              {pendingSummary && (
+                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">Title:</span>
+                    <span className="font-bold text-slate-800">{pendingSummary.title}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">Type:</span>
+                    <span
+                      className={`font-bold capitalize ${
+                        pendingSummary.type === 'income' ? 'text-emerald-600' : 'text-slate-800'
+                      }`}
+                    >
+                      {pendingSummary.type}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">Amount:</span>
+                    <span
+                      className={`font-black ${
+                        pendingSummary.type === 'income' ? 'text-emerald-600' : 'text-slate-900'
+                      }`}
+                    >
+                      {pendingSummary.type === 'income' ? '+' : '-'}$
+                      {parseFloat(pendingSummary.amount || '0').toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          }
+          confirmText="Save Changes"
+          cancelText="Cancel"
+          variant="primary"
+          isLoading={updateTxMutation.isPending}
+        />
+      )}
     </div>
   );
 }

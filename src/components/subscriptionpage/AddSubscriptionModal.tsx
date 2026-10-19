@@ -1,17 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/input';
+import { Lock } from 'lucide-react';
 import { useGetCategories } from '@/hooks/queries/categories';
-import { useAddSubscription, RecurrenceFrequency, RecurrenceEndMode } from '@/hooks/queries/subscriptions';
+import {
+  useAddSubscription,
+  useUpdateSubscription,
+  SubscriptionData,
+  RecurrenceFrequency,
+  RecurrenceEndMode,
+} from '@/hooks/queries/subscriptions';
 import { RecurrencePreview } from './RecurrencePreview';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  subscription?: SubscriptionData | null;
 }
 
 const FREQUENCY_OPTIONS = [
@@ -30,7 +38,9 @@ const END_MODE_OPTIONS = [
   { value: 'after_n', label: 'After a number of payments' },
 ];
 
-export function AddSubscriptionModal({ isOpen, onClose }: Props) {
+export function AddSubscriptionModal({ isOpen, onClose, subscription }: Props) {
+  const isEditing = Boolean(subscription);
+
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [name, setName] = useState('');
   const [rate, setRate] = useState('');
@@ -50,7 +60,61 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
   const [errorMsg, setErrorMsg] = useState('');
 
   const { data: categories = [] } = useGetCategories();
-  const { mutateAsync: addSubscription, isPending } = useAddSubscription();
+  const { mutateAsync: addSubscription, isPending: isAdding } = useAddSubscription();
+  const { mutateAsync: updateSubscription, isPending: isUpdating } = useUpdateSubscription();
+
+  const isPending = isAdding || isUpdating;
+
+  useEffect(() => {
+    if (subscription && isOpen) {
+      setType(subscription.type || 'expense');
+      setName(subscription.name || '');
+      setRate(subscription.amount ? String(subscription.amount) : '');
+      setCategoryId(subscription.category_id ? String(subscription.category_id) : '');
+      setStartDate(subscription.start_date ? subscription.start_date.split('T')[0] : '');
+      setFrequency(
+        subscription.frequency ||
+          (subscription.billing_cycle === 'yearly' ? 'yearly' : 'monthly')
+      );
+      setIntervalCount(subscription.interval_count || 1);
+      setByMonthDay(
+        subscription.by_month_day ||
+          (subscription.start_date
+            ? new Date(subscription.start_date).getDate()
+            : new Date().getDate())
+      );
+      setByWeekday(
+        subscription.by_weekday !== undefined && subscription.by_weekday !== null
+          ? subscription.by_weekday
+          : subscription.start_date
+          ? new Date(subscription.start_date).getDay()
+          : new Date().getDay()
+      );
+      setEndMode(subscription.end_mode || 'never');
+      setEndDate(subscription.end_date ? subscription.end_date.split('T')[0] : '');
+      setOccurrencesTotal(
+        subscription.occurrences_total ? String(subscription.occurrences_total) : ''
+      );
+      setAutoPost(Boolean(subscription.auto_post));
+      setErrorMsg('');
+    } else if (!subscription && isOpen) {
+      setType('expense');
+      setName('');
+      setRate('');
+      setCategoryId('');
+      const today = new Date().toISOString().split('T')[0];
+      setStartDate(today);
+      setFrequency('monthly');
+      setIntervalCount(1);
+      setByMonthDay(new Date().getDate());
+      setByWeekday(new Date().getDay());
+      setEndMode('never');
+      setEndDate('');
+      setOccurrencesTotal('');
+      setAutoPost(false);
+      setErrorMsg('');
+    }
+  }, [subscription, isOpen]);
 
   const handleRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value.replace(/[^0-9.]/g, '');
@@ -62,6 +126,7 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
   };
 
   const handleStartDateChange = (newDate: string) => {
+    if (isEditing) return; // Prevent modifying start date when editing
     setStartDate(newDate);
     try {
       const dt = new Date(newDate);
@@ -76,43 +141,57 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
 
   const handleSubmit = async () => {
     setErrorMsg('');
-    if (!name.trim() || !rate || !startDate || !categoryId) {
-      setErrorMsg('Please fill out all required fields (Name, Amount, Category, Start Date)');
+    if (!name.trim() || !rate || (!startDate && !isEditing) || !categoryId) {
+      setErrorMsg('Please fill out all required fields (Name, Amount, Category)');
       return;
     }
 
     try {
-      await addSubscription({
-        name: name.trim(),
-        amount: parseFloat(rate),
-        type,
-        billing_cycle: frequency === 'yearly' ? 'yearly' : 'monthly',
-        frequency,
-        interval_count: intervalCount,
-        by_month_day: ['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(frequency) ? byMonthDay : null,
-        by_weekday: ['weekly', 'biweekly'].includes(frequency) ? byWeekday : null,
-        end_mode: endMode,
-        end_date: endMode === 'on_date' ? endDate : null,
-        occurrences_total: endMode === 'after_n' && occurrencesTotal ? parseInt(occurrencesTotal, 10) : null,
-        auto_post: autoPost,
-        start_date: startDate,
-        category_id: parseInt(categoryId, 10),
-      });
+      if (isEditing && subscription) {
+        await updateSubscription({
+          id: subscription.id,
+          name: name.trim(),
+          amount: parseFloat(rate),
+          type,
+          billing_cycle: frequency === 'yearly' ? 'yearly' : 'monthly',
+          frequency,
+          interval_count: intervalCount,
+          by_month_day: ['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(frequency)
+            ? byMonthDay
+            : null,
+          by_weekday: ['weekly', 'biweekly'].includes(frequency) ? byWeekday : null,
+          end_mode: endMode,
+          end_date: endMode === 'on_date' ? endDate : null,
+          occurrences_total:
+            endMode === 'after_n' && occurrencesTotal ? parseInt(occurrencesTotal, 10) : null,
+          auto_post: autoPost,
+          category_id: parseInt(categoryId, 10),
+        });
+      } else {
+        await addSubscription({
+          name: name.trim(),
+          amount: parseFloat(rate),
+          type,
+          billing_cycle: frequency === 'yearly' ? 'yearly' : 'monthly',
+          frequency,
+          interval_count: intervalCount,
+          by_month_day: ['monthly', 'quarterly', 'half_yearly', 'yearly'].includes(frequency)
+            ? byMonthDay
+            : null,
+          by_weekday: ['weekly', 'biweekly'].includes(frequency) ? byWeekday : null,
+          end_mode: endMode,
+          end_date: endMode === 'on_date' ? endDate : null,
+          occurrences_total:
+            endMode === 'after_n' && occurrencesTotal ? parseInt(occurrencesTotal, 10) : null,
+          auto_post: autoPost,
+          start_date: startDate,
+          category_id: parseInt(categoryId, 10),
+        });
+      }
 
-      // Reset form
-      setName('');
-      setRate('');
-      setCategoryId('');
-      setType('expense');
-      setFrequency('monthly');
-      setIntervalCount(1);
-      setEndMode('never');
-      setEndDate('');
-      setOccurrencesTotal('');
-      setAutoPost(false);
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.error || 'Failed to add recurring payment');
+      setErrorMsg(err.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} recurring payment`);
     }
   };
 
@@ -121,9 +200,13 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title="Add Recurring Payment"
-      description="Create a recurring income or expense rule with automated schedule occurrences."
-      submitText={isPending ? 'Saving...' : 'Create Recurring Rule'}
+      title={isEditing ? `Edit Recurring Payment` : `Add Recurring Payment`}
+      description={
+        isEditing
+          ? `Update schedule parameters and recurrence settings for #${subscription?.id} ${subscription?.name}.`
+          : `Create a recurring income or expense rule with automated schedule occurrences.`
+      }
+      submitText={isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Recurring Rule'}
       maxWidth="max-w-2xl"
     >
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
@@ -190,11 +273,29 @@ export function AddSubscriptionModal({ isOpen, onClose }: Props) {
             }))}
           />
 
-          <DatePicker 
-            label="First Payment / Start Date *"
-            value={startDate}
-            onChange={handleStartDateChange}
-          />
+          {isEditing ? (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-bold text-[#4F627A]">First Payment / Start Date</label>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                  <Lock className="w-3 h-3" /> Locked on Edit
+                </span>
+              </div>
+              <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-500 cursor-not-allowed flex items-center justify-between">
+                <span>{startDate}</span>
+                <Lock className="w-4 h-4 text-slate-400" />
+              </div>
+              <p className="text-[11px] font-medium text-slate-400 mt-1">
+                Start date cannot be modified once a recurring schedule has materialized occurrences.
+              </p>
+            </div>
+          ) : (
+            <DatePicker 
+              label="First Payment / Start Date *"
+              value={startDate}
+              onChange={handleStartDateChange}
+            />
+          )}
         </div>
 
         {/* Recurrence Frequency & Interval Section */}

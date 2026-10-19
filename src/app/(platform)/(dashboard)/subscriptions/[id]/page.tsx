@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAppData } from '@/providers/AppDataProvider';
-import { Calendar, Clock, Repeat, Folder, Zap, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, Repeat, Folder, Zap, CheckCircle2, Pencil } from 'lucide-react';
 import { RemindersSettings } from '@/components/subscriptionpage/RemindersSettings';
 import { OccurrenceTimeline } from '@/components/subscriptionpage/OccurrenceTimeline';
 import { useGetSubscriptionDetails } from '@/hooks/queries/subscriptions';
 import { SubscriptionLogo } from '@/components/ui/SubscriptionLogo';
 import { formatRecurrenceFrequency } from '@/lib/recurrenceFormatters';
+import { AddSubscriptionModal } from '@/components/subscriptionpage/AddSubscriptionModal';
 
 export default function SubscriptionDetailsPage() {
   const { setHeaderData } = useAppData();
@@ -47,6 +48,8 @@ export default function SubscriptionDetailsPage() {
     </div>
   );
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
       {/* Top Header Card */}
@@ -69,6 +72,18 @@ export default function SubscriptionDetailsPage() {
               <span className="text-xs font-medium text-slate-400 capitalize">· {formatRecurrenceFrequency(subscription)}</span>
             </div>
           </div>
+        </div>
+
+        {/* Edit Recurring Payment Action Button */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs"
+          >
+            <Pencil className="w-3.5 h-3.5 text-slate-600" />
+            <span>Edit Recurring Payment</span>
+          </button>
         </div>
       </div>
 
@@ -150,6 +165,13 @@ export default function SubscriptionDetailsPage() {
           defaultCategoryId={subscription.category_id}
         />
       </div>
+
+      {/* Edit Recurring Payment Modal */}
+      <AddSubscriptionModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        subscription={subscription}
+      />
     </div>
   );
 }

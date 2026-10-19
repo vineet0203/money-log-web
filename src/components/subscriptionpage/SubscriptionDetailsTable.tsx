@@ -81,7 +81,8 @@ export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDeta
       missedCount: sub.missed_count || 0,
       status: sub.computed_status,
       dbStatus: sub.status,
-      nextBillingDate: sub.next_billing_date
+      nextBillingDate: sub.next_billing_date,
+      rawSubscription: sub,
     };
   });
 
@@ -193,6 +194,7 @@ export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDeta
           nextBillingDate={row.nextBillingDate}
           billingCycle={row.billingCycle}
           type={row.type}
+          subscription={row.rawSubscription}
         />
       )
     }

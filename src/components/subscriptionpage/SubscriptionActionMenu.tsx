@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Eye, XCircle, CheckCircle, CreditCard } from 'lucide-react';
+import { Eye, XCircle, CheckCircle, Pencil } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Menu, MenuItemType } from '@/components/ui/Menu';
 import { Modal } from '@/components/ui/Modal';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import { useSnackbar } from 'notistack';
+import { AddSubscriptionModal } from './AddSubscriptionModal';
+import { SubscriptionData, useGetSubscriptionDetails } from '@/hooks/queries/subscriptions';
 
 interface Props {
   type?: 'expense' | 'income';
@@ -13,12 +15,25 @@ interface Props {
   status: 'active' | 'paused' | 'cancelled';
   nextBillingDate?: string;
   billingCycle?: string;
+  subscription?: SubscriptionData;
 }
 
-export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate, billingCycle, type = 'expense' }: Props) {
+export function SubscriptionActionMenu({
+  subscriptionId,
+  status,
+  nextBillingDate,
+  billingCycle,
+  type = 'expense',
+  subscription,
+}: Props) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [modalAction, setModalAction] = useState<'cancel' | 'reactivate' | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Fallback fetch if full subscription object wasn't passed directly
+  const { data: detailsData } = useGetSubscriptionDetails(subscriptionId);
+  const resolvedSubscription = subscription || detailsData?.subscription;
 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: 'active' | 'paused' | 'cancelled') => {
@@ -37,47 +52,30 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
     updateStatusMutation.mutate(newStatus);
   };
 
-  const handleMarkAsPaid = () => {
-    if (nextBillingDate && billingCycle) {
-      const today = new Date();
-      const nextDate = new Date(nextBillingDate);
-      const diffTime = nextDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            const maxDays = billingCycle === 'yearly' ? 30 : 15;
-      
-      if (diffDays > maxDays) {
-        const actionText = type === 'income' ? 'accept payment' : 'pay';
-        enqueueSnackbar(`Too early! You can only ${actionText} up to ${maxDays} days before the due date.`, { variant: 'warning' });
-        return;
-      }
-      
-      
-    }
-    router.push(`/subscriptions/${subscriptionId}/pay`);
-  };
-
   const menuItems: MenuItemType[] = [
     {
       label: 'View Details',
       icon: <Eye size={16} />,
       href: `/subscriptions/${subscriptionId}`,
     },
-    status === 'active' ? {
-      label: 'Cancel Payment',
-      icon: <XCircle size={16} />,
-      hoverColor: 'hover:bg-red-50 hover:text-red-600',
-      onClick: () => setModalAction('cancel'),
-    } : {
-      label: 'Reactivate',
-      icon: <CheckCircle size={16} />,
-      hoverColor: 'hover:bg-green-50 hover:text-green-600',
-      onClick: () => setModalAction('reactivate'),
-    },
     {
-      label: type === 'income' ? 'Accept Payment' : 'Pay',
-      icon: <CreditCard size={16} />,
-      onClick: handleMarkAsPaid,
-    }
+      label: 'Edit Payment',
+      icon: <Pencil size={16} />,
+      onClick: () => setIsEditModalOpen(true),
+    },
+    status === 'active'
+      ? {
+          label: 'Cancel Payment',
+          icon: <XCircle size={16} />,
+          hoverColor: 'hover:bg-red-50 hover:text-red-600',
+          onClick: () => setModalAction('cancel'),
+        }
+      : {
+          label: 'Reactivate',
+          icon: <CheckCircle size={16} />,
+          hoverColor: 'hover:bg-green-50 hover:text-green-600',
+          onClick: () => setModalAction('reactivate'),
+        },
   ];
 
   return (
@@ -86,13 +84,20 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
         <Menu items={menuItems} />
       </div>
 
+      {/* Edit Recurring Payment Modal */}
+      {resolvedSubscription && (
+        <AddSubscriptionModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          subscription={resolvedSubscription}
+        />
+      )}
+
       {/* Confirmation Modal */}
       <Modal
         isOpen={modalAction !== null}
         onClose={() => setModalAction(null)}
-        title={
-          modalAction === 'cancel' ? 'Cancel Payment' : 'Reactivate Payment'
-        }
+        title={modalAction === 'cancel' ? 'Cancel Payment' : 'Reactivate Payment'}
         submitText="Confirm"
         onSubmit={() => {
           if (modalAction === 'cancel') handleStatusUpdate('cancelled');
@@ -101,8 +106,9 @@ export function SubscriptionActionMenu({ subscriptionId, status, nextBillingDate
         isSubmitDisabled={updateStatusMutation.isPending}
       >
         <p className="text-slate-600 font-medium">
-          {modalAction === 'cancel' ? 'Are you sure you want to cancel this recurring payment? This action will mark it as inactive.' :
-           'Are you sure you want to reactivate this recurring payment?'}
+          {modalAction === 'cancel'
+            ? 'Are you sure you want to cancel this recurring payment? This action will mark it as inactive.'
+            : 'Are you sure you want to reactivate this recurring payment?'}
         </p>
       </Modal>
     </>

@@ -179,6 +179,7 @@ export default function RenewalRemindersPage() {
           nextBillingDate={row.next_billing_date}
           billingCycle={row.billing_cycle}
           type={row.type || 'expense'}
+          subscription={row}
         />
       )
     }
