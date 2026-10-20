@@ -49,7 +49,7 @@ export function TransactionActionMenu({ transaction }: TransactionActionMenuProp
           icon: <Trash2 size={15} />,
           disabled: true,
           color: 'text-slate-400',
-          title: "Linked to recurring payment. Use 'Undo Payment' from the recurring payment details screen.",
+          title: "Linked to subscription. Use 'Undo Payment' from the subscription details screen.",
         }
       : {
           label: 'Delete',

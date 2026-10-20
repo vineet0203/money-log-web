@@ -75,7 +75,7 @@ export default function LoginPage() {
           </div>
 
           <h2 className="text-4xl md:text-5xl font-extrabold leading-tight mb-6">
-            Easily cancel unwanted<br />recurring payments
+            Easily cancel unwanted<br />subscriptions
           </h2>
 
           <div className="flex items-center gap-3 mb-6">
@@ -88,7 +88,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-lg md:text-xl text-green-50 max-w-lg leading-relaxed">
-            Recurring Payment cancellation and tracking are just part of why we have over 186K 5-star ratings!
+            Subscription cancellation and tracking are just part of why we have over 186K 5-star ratings!
           </p>
         </div>
 

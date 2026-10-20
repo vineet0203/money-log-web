@@ -5,6 +5,7 @@ import { PosReceiptSettings } from './types';
 import { Printer } from 'lucide-react';
 import { PosReceipt, PosReceiptData } from '@/components/pos/common/PosReceipt';
 import { printThermalReceipt } from '@/lib/posPrint';
+import { useGetProfile } from '@/hooks/queries/user';
 
 interface ReceiptPreviewProps {
   settings: PosReceiptSettings;
@@ -34,6 +35,9 @@ export function ReceiptPreview({
   date,
   mode = 'interactive',
 }: ReceiptPreviewProps) {
+  const { data: profile } = useGetProfile();
+  const effectiveCashier = settings.cashierName?.trim() || profile?.name?.trim() || profile?.email || 'Store Staff';
+
   const [paperWidth, setPaperWidth] = useState<'80mm' | '58mm'>(
     settings.paperSize === '58mm' ? '58mm' : '80mm'
   );
@@ -59,7 +63,7 @@ export function ReceiptPreview({
     orderNumber: receiptNumber,
     date: date || new Date(),
     registerLabel: 'Terminal #01 (Active)',
-    cashierName: 'Register Lead (POS-01)',
+    cashierName: effectiveCashier,
     customerName,
     items: sampleItems.map((item, idx) => ({
       id: idx,

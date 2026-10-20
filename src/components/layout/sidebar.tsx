@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ShoppingCart, 
   CircleDollarSign, 
+  Repeat,
   ChevronDown,
   ChevronRight,
   Menu,
@@ -34,9 +35,15 @@ const menuItems: MenuItem[] = [
     icon: CircleDollarSign,
     items: [
       { title: "Income & Expenses", href: "/transactions" },
-      { title: "Recurring Payments", href: "/subscriptions" },
-      { title: "Renewal Reminders", href: "/subscriptions/reminders" },
       { title: "Categories", href: "/settings/categories" },
+    ]
+  },
+  {
+    title: "Subscriptions Management",
+    icon: Repeat,
+    items: [
+      { title: "Subscriptions", href: "/subscriptions" },
+      { title: "Renewal Reminders", href: "/subscriptions/reminders" },
     ]
   },
   {
@@ -212,7 +219,6 @@ export function Sidebar() {
             return (
               <div key={index} className={`px-3 py-1.5 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-1' : ''}`}>
                 <div className="relative">
-                  {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
                   <Link 
                     href={item.href}
                     onClick={() => setIsMobileOpen(false)}
@@ -235,7 +241,6 @@ export function Sidebar() {
           return (
             <div key={index} className={`px-3 py-1.5 ${index !== menuItems.length - 1 ? 'border-b border-slate-800/50 mb-1' : ''}`}>
               <div className="relative">
-                {isActive && <div className="absolute -left-3 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />}
                 <button
                   onClick={() => toggleMenu(item.title)}
                   className={`w-full flex text-sm items-center ${isCollapsed ? 'justify-center py-2' : 'gap-3 px-3 py-2'} rounded-xl transition-all duration-200 group ${
@@ -267,10 +272,13 @@ export function Sidebar() {
                         key={subIndex}
                         href={subItem.href}
                         onClick={() => setIsMobileOpen(false)}
-                        className={`flex items-center gap-3 py-1.5 px-3 rounded-lg text-sm transition-colors ${
+                        className={`flex items-center gap-3 py-1.5 px-3 rounded-lg text-sm transition-colors relative overflow-hidden ${
                           isSubActive ? 'text-white font-medium bg-slate-800/50' : 'text-slate-200 hover:text-white hover:bg-slate-800/30'
                         }`}
                       >
+                        {isSubActive && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#159A1D] rounded-r-md" />
+                        )}
                         {/* Green dot for all sub items */}
                         <span className="w-1.5 h-1.5 rounded-full bg-[#159A1D] flex-shrink-0" />
                         {subItem.title}

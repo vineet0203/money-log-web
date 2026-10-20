@@ -25,7 +25,7 @@ export default function SubscriptionsPage() {
   const missedCount = catchUpData?.totalMissed || Number(stats?.total_missed_count) || 0;
 
   useEffect(() => {
-    setHeaderData("Recurring Payments", "Manage all your recurring schedules, frequencies, and materialized occurrences.");
+    setHeaderData("Subscriptions", "Manage all your subscriptions, frequencies, and renewal schedules.");
   }, [setHeaderData]);
 
   return (

@@ -237,7 +237,7 @@ export function PosReceipt({
           {settings.showCashierName && (
             <div className="flex justify-between items-center">
               <span className="text-slate-500">Cashier:</span>
-              <span className="text-slate-800">{data.cashierName || 'Store Lead'}</span>
+              <span className="text-slate-800">{data.cashierName || settings.cashierName || 'Store Staff'}</span>
             </div>
           )}
 

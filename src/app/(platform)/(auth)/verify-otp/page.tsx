@@ -116,7 +116,7 @@ function VerifyOtpContent() {
           </div>
 
           <p className="text-lg md:text-xl text-green-50 max-w-lg leading-relaxed">
-            Please enter the 6-digit code sent to your phone to securely access your recurring payments and tracking.
+            Please enter the 6-digit code sent to your phone to securely access your subscriptions and tracking.
           </p>
         </div>
 

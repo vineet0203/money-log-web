@@ -22,6 +22,7 @@ import { PosSearchInput, PosReceipt, PosReceiptData, printThermalReceipt } from 
 import { Button } from '@/components/ui/button';
 import { useGetInfinitePosProducts, useGetPosCategories, PosProduct, PosProductVariant } from '@/hooks/queries/posProducts';
 import { useCreatePosOrder, PosOrder, CreatePosOrderPayload } from '@/hooks/queries/posOrders';
+import { useGetProfile } from '@/hooks/queries/user';
 import { useSnackbar } from 'notistack';
 
 export interface CartItem {
@@ -45,6 +46,10 @@ interface ProductVariantGroup {
 export default function NewSaleTab() {
   const { enqueueSnackbar } = useSnackbar();
   const { receiptSettings } = usePosSettings();
+  const { data: profile } = useGetProfile();
+  const effectiveCashier = useMemo(() => {
+    return receiptSettings.cashierName?.trim() || profile?.name?.trim() || profile?.email || 'Store Staff';
+  }, [receiptSettings.cashierName, profile?.name, profile?.email]);
   const currencySymbol = receiptSettings.currencySymbol || '$';
 
   // State
@@ -343,7 +348,10 @@ export default function NewSaleTab() {
         payment_mode: selectedTender,
         payment_amount: Number(grandTotal.toFixed(2)),
         payment_reference: selectedTender === 'UPI' ? receiptSettings.upiId : undefined,
-        receipt_config: receiptSettings,
+        receipt_config: {
+          ...receiptSettings,
+          cashierName: effectiveCashier,
+        },
         items: cart.map(item => ({
           variant_id: item.variantId,
           item_name: `${item.productName}${item.variantTitle && item.variantTitle !== 'Default' && item.variantTitle !== 'Standard' ? ` (${item.variantTitle})` : ''}`,
@@ -388,7 +396,7 @@ export default function NewSaleTab() {
     title: 'Tax Invoice / Current Sale',
     date: new Date(),
     registerLabel: 'Terminal #01 (Active)',
-    cashierName: 'Store Lead',
+    cashierName: effectiveCashier,
     customerName,
     customerPhone: customerPhone || null,
     items: cart.map(item => ({
@@ -423,6 +431,7 @@ export default function NewSaleTab() {
     grandTotal,
     selectedTender,
     receiptSettings.upiId,
+    effectiveCashier,
   ]);
 
   // Structured Receipt Data for Completed Sale
@@ -433,7 +442,7 @@ export default function NewSaleTab() {
       title: 'Tax Invoice / Receipt',
       date: completedOrder.created_at || completedOrder.order_date,
       registerLabel: completedOrder.register_label || 'Terminal #01',
-      cashierName: 'Store Lead',
+      cashierName: completedOrder.receipt_config?.cashierName || effectiveCashier,
       customerName: completedOrder.customer_name || 'Walk-in Customer',
       customerPhone: completedOrder.customer_phone || customerPhone || null,
       items: (completedOrder.items || []).map(item => ({
@@ -451,7 +460,7 @@ export default function NewSaleTab() {
       paymentMode: completedOrder.payment?.payment_mode || completedOrder.payment_mode || selectedTender,
       paymentReference: completedOrder.payment?.reference_number || undefined,
     };
-  }, [completedOrder, customerPhone, selectedTender]);
+  }, [completedOrder, customerPhone, selectedTender, effectiveCashier]);
 
   // Full address format for receipt
   const fullAddress = [
@@ -705,20 +714,29 @@ export default function NewSaleTab() {
       {/* ======================================================== */}
       {/* Right Column: "Current Sale" Thermal Receipt Format      */}
       {/* Matches the exact UI configured in POS Settings         */}
-      {/* ======================================================== */}
-      <div className="w-full xl:w-[480px] 2xl:w-[510px] shrink-0 flex flex-col gap-4">
+      <div className={`w-full shrink-0 flex flex-col items-center gap-4 ${
+        receiptSettings.paperSize === '58mm' ? 'xl:w-[300px]' : 'xl:w-[420px]'
+      }`}>
         <PosReceipt
           data={currentReceiptData}
           mode="interactive"
           id="pos-thermal-receipt"
           settings={receiptSettings}
+          className="w-full"
           onEditCustomer={() => setIsCustomerModalOpen(true)}
           onUpdateQty={handleUpdateItemQty}
           onRemoveItem={handleRemoveItem}
         />
 
-        {/* Payment & Action Controls Area */}
-        <div className="bg-white border border-slate-200/90 shadow-md rounded-2xl p-4 sm:p-5 font-sans no-print space-y-3.5">
+        {/* Payment & Action Controls Area - matches exact receipt width */}
+        <div 
+          className={`bg-white border border-slate-200/90 shadow-md rounded-2xl p-4 sm:p-5 font-sans no-print space-y-3.5 w-full ${
+            receiptSettings.paperSize === '58mm' ? 'max-w-[300px]' : 'max-w-[420px]'
+          }`}
+          style={{
+            boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04)',
+          }}
+        >
           {/* Total Payable Summary */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>

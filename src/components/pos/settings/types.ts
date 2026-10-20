@@ -47,6 +47,7 @@ export interface PosReceiptSettings {
   paperSize: PaperWidth;
   showTaxBreakdown: boolean;
   showCashierName: boolean;
+  cashierName?: string;
   showCustomerInfo: boolean;
   showUpiQrOnReceipt: boolean;
   autoPrintReceipt: boolean;
@@ -92,7 +93,7 @@ export const DEFAULT_RECEIPT_SETTINGS: PosReceiptSettings = {
   isTaxInclusive: false,
   upiId: 'moneylogpos@okaxis',
   upiPayeeName: 'MoneyLog Retail Store',
-  upiQrType: 'auto',
+  upiQrType: 'custom',
   upiQrImageUrl: '',
   receiptHeaderNote: 'Quality & Freshness Guaranteed',
   receiptFooterNote: 'Thank you for your purchase! Please visit again.',

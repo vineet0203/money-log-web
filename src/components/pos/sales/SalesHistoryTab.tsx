@@ -93,6 +93,7 @@ export default function SalesHistoryTab() {
       title: 'Tax Invoice / Receipt',
       date: orderDetails.created_at || orderDetails.order_date,
       registerLabel: orderDetails.register_label || 'Terminal #01',
+      cashierName: orderDetails.receipt_config?.cashierName || receiptSettings.cashierName || undefined,
       customerName: orderDetails.customer_name || 'Walk-in Customer',
       customerPhone: orderDetails.customer_phone,
       items: (orderDetails.items || []).map((it) => ({
@@ -110,7 +111,7 @@ export default function SalesHistoryTab() {
       paymentMode: orderDetails.payments?.[0]?.payment_mode || orderDetails.payment_mode || 'Cash',
       paymentReference: orderDetails.payments?.[0]?.reference_number || undefined,
     };
-  }, [orderDetails]);
+  }, [orderDetails, receiptSettings.cashierName]);
 
   // Handle return qty change
   const handleReturnQtyChange = (variantId: number, maxQty: number, qty: number) => {

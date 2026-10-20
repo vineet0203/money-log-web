@@ -243,7 +243,7 @@ export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDeta
               className="shrink-0"
               leftIcon={<Plus size={15} />}
             >
-              Add Recurring Payment
+              Add Subscription
             </Button>
           )}
         </div>
@@ -261,7 +261,7 @@ export function SubscriptionDetailsTable({ onAddSubscription }: SubscriptionDeta
             totalPages: response?.pagination?.totalPages || 1, 
             totalItems: response?.pagination?.totalItems || 0,
             itemsPerPage: response?.pagination?.itemsPerPage || itemsPerPage,
-            itemName: 'recurring payments',
+            itemName: 'subscriptions',
             onPageChange: (newPage) => setPage(newPage)
           }}
         />

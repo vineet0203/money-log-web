@@ -18,7 +18,7 @@ import Reveal from "@/components/ui/Reveal";
 export const metadata = {
   title: "Budgeting | moneylog.com",
   description:
-    "Track upcoming transactions, manage recurring payments, monitor EMIs and plan your payments — build a budget that works for you.",
+    "Track upcoming transactions, manage subscriptions, monitor EMIs and plan your payments — build a budget that works for you.",
 };
 
 const HIGHLIGHTS = [
@@ -31,8 +31,8 @@ const HIGHLIGHTS = [
   {
     icon: RefreshCw,
     tile: "bg-violet-600",
-    title: "Cancel Recurring Payments",
-    description: "Manage your recurring plans easily.",
+    title: "Cancel Subscriptions",
+    description: "Manage your subscription plans easily.",
   },
   {
     icon: Wallet,
@@ -60,8 +60,8 @@ const FEATURES = [
     icon: Settings,
     badge: "bg-pink-100 text-pink-600",
     card: "bg-pink-50/60",
-    title: "Manage Recurring Payments",
-    description: "See your active recurring payments and cancel any plan for the next month.",
+    title: "Manage Subscriptions",
+    description: "See your active subscriptions and cancel any plan for the next month.",
   },
   {
     icon: Car,
@@ -89,7 +89,7 @@ const FEATURES = [
     badge: "bg-teal-100 text-teal-600",
     card: "bg-teal-50/60",
     title: "Receive Reminders & Alerts",
-    description: "Get notified about upcoming payments, recurring payment renewals and low balance.",
+    description: "Get notified about upcoming payments, subscription renewals and low balance.",
   },
 ];
 
@@ -120,7 +120,7 @@ export default function BudgetPage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-relaxed font-medium text-pretty text-slate-600 sm:text-lg lg:mt-6 lg:text-xl">
-                Stay in control of your money. Track upcoming transactions, manage recurring payments,
+                Stay in control of your money. Track upcoming transactions, manage subscriptions,
                 monitor EMIs, and plan your payments — all in one place. Build a budget that works
                 for you.
               </p>
@@ -152,7 +152,7 @@ export default function BudgetPage() {
               />
               <Image
                 src="/budgeting_dashboard_mockup.png"
-                alt="moneylog budgeting dashboard showing monthly budget, upcoming transactions, recurring payments and EMI overview"
+                alt="moneylog budgeting dashboard showing monthly budget, upcoming transactions, subscriptions and EMI overview"
                 width={1493}
                 height={895}
                 sizes="(min-width: 1280px) 760px, 100vw"

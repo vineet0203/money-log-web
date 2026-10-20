@@ -91,7 +91,7 @@ export const CatchUpPanel: React.FC<CatchUpPanelProps> = ({ isOpen, onClose }) =
                 All caught up!
               </h4>
               <p className="text-sm font-medium text-slate-500 mt-1">
-                You have no missed or overdue recurring payments.
+                You have no missed or overdue subscriptions.
               </p>
             </div>
             <button

@@ -191,7 +191,7 @@ export function AddSubscriptionModal({ isOpen, onClose, subscription }: Props) {
 
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} recurring payment`);
+      setErrorMsg(err.response?.data?.error || `Failed to ${isEditing ? 'update' : 'add'} subscription`);
     }
   };
 
@@ -200,13 +200,13 @@ export function AddSubscriptionModal({ isOpen, onClose, subscription }: Props) {
       isOpen={isOpen}
       onClose={onClose}
       onSubmit={handleSubmit}
-      title={isEditing ? `Edit Recurring Payment` : `Add Recurring Payment`}
+      title={isEditing ? `Edit Subscription` : `Add Subscription`}
       description={
         isEditing
           ? `Update schedule parameters and recurrence settings for #${subscription?.id} ${subscription?.name}.`
-          : `Create a recurring income or expense rule with automated schedule occurrences.`
+          : `Create a subscription income or expense rule with automated schedule occurrences.`
       }
-      submitText={isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Recurring Rule'}
+      submitText={isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Subscription'}
       maxWidth="max-w-2xl"
     >
       <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">

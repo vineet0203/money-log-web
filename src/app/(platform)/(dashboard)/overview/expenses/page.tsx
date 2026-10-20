@@ -116,9 +116,9 @@ export default function DailyExpenseTrackingPage() {
             {row.subscription_id && (
               <span
                 className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200/70"
-                title="Linked to recurring payment"
+                title="Linked to subscription"
               >
-                Recurring
+                Subscription
               </span>
             )}
             {row.receipt_url && (

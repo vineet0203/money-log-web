@@ -99,15 +99,15 @@ export function resolveStatInfo(title?: string, text?: string, subtitle?: React.
   }
 
   if (normalized.includes('7 day') || normalized.includes('seven day')) {
-    return 'Scheduled recurring payments and bills renewing within the next 7 days.';
+    return 'Scheduled subscriptions and bills renewing within the next 7 days.';
   }
 
   if (normalized.includes('30 day')) {
-    return 'Scheduled recurring payments and bills renewing within the next 30 days.';
+    return 'Scheduled subscriptions and bills renewing within the next 30 days.';
   }
 
   if (normalized.includes('overdue') || normalized.includes('missed')) {
-    return 'Payments and recurring obligations that have passed their scheduled billing date without confirmation.';
+    return 'Payments and subscription obligations that have passed their scheduled billing date without confirmation.';
   }
 
   if (normalized.includes('budget')) {

@@ -74,7 +74,7 @@ export default function SubscriptionDetailsPage() {
           </div>
         </div>
 
-        {/* Edit Recurring Payment Action Button */}
+        {/* Edit Subscription Action Button */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -82,7 +82,7 @@ export default function SubscriptionDetailsPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs"
           >
             <Pencil className="w-3.5 h-3.5 text-slate-600" />
-            <span>Edit Recurring Payment</span>
+            <span>Edit Subscription</span>
           </button>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function SubscriptionDetailsPage() {
         />
       </div>
 
-      {/* Edit Recurring Payment Modal */}
+      {/* Edit Subscription Modal */}
       <AddSubscriptionModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}

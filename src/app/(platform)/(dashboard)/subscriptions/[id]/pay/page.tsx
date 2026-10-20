@@ -164,7 +164,7 @@ function PaymentFormInner({
     const isIncome = type === 'income';
     setHeaderData(
       isIncome ? "Accept Payment" : "Make Payment", 
-      isIncome ? "Record an incoming payment for this recurring payment." : "Record a manual payment for this recurring payment.", 
+      isIncome ? "Record an incoming payment for this subscription." : "Record a manual payment for this subscription.", 
       true
     );
   }, [setHeaderData, type]);
@@ -443,11 +443,11 @@ function PaymentFormContainer() {
   const { data: categories } = useGetCategories();
 
   if (subLoading || (occId && occLoading)) {
-    return <div className="p-8 text-center text-slate-500 font-medium">Loading recurring payment details...</div>;
+    return <div className="p-8 text-center text-slate-500 font-medium">Loading subscription details...</div>;
   }
 
   if (!subData?.subscription) {
-    return <div className="p-8 text-center text-red-500 font-medium">Recurring payment not found.</div>;
+    return <div className="p-8 text-center text-red-500 font-medium">Subscription not found.</div>;
   }
 
   const matchedOcc = occId && occData?.data

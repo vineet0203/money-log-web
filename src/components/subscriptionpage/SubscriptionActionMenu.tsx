@@ -84,7 +84,7 @@ export function SubscriptionActionMenu({
         <Menu items={menuItems} />
       </div>
 
-      {/* Edit Recurring Payment Modal */}
+      {/* Edit Subscription Modal */}
       {resolvedSubscription && (
         <AddSubscriptionModal
           isOpen={isEditModalOpen}
@@ -97,7 +97,7 @@ export function SubscriptionActionMenu({
       <Modal
         isOpen={modalAction !== null}
         onClose={() => setModalAction(null)}
-        title={modalAction === 'cancel' ? 'Cancel Payment' : 'Reactivate Payment'}
+        title={modalAction === 'cancel' ? 'Cancel Subscription' : 'Reactivate Subscription'}
         submitText="Confirm"
         onSubmit={() => {
           if (modalAction === 'cancel') handleStatusUpdate('cancelled');
@@ -107,8 +107,8 @@ export function SubscriptionActionMenu({
       >
         <p className="text-slate-600 font-medium">
           {modalAction === 'cancel'
-            ? 'Are you sure you want to cancel this recurring payment? This action will mark it as inactive.'
-            : 'Are you sure you want to reactivate this recurring payment?'}
+            ? 'Are you sure you want to cancel this subscription? This action will mark it as inactive.'
+            : 'Are you sure you want to reactivate this subscription?'}
         </p>
       </Modal>
     </>

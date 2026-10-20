@@ -169,7 +169,7 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
         <div>
           <h3 className="text-base sm:lg font-bold text-slate-800 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-[#159A1D]" />
-            Recurring Occurrences Timeline
+            Subscription Occurrences Timeline
           </h3>
           <p className="text-xs text-slate-400 mt-0.5">
             Materialized due dates, payment records, and schedule status.
@@ -371,7 +371,7 @@ export const OccurrenceTimeline: React.FC<OccurrenceTimelineProps> = ({
           isOpen={skipTarget !== null}
           onClose={() => setSkipTarget(null)}
           onConfirm={handleConfirmSkip}
-          title="Skip Recurring Occurrence"
+          title="Skip Subscription Occurrence"
           description={
             <span>
               Are you sure you want to skip the occurrence for{' '}

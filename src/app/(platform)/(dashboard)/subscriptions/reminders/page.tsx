@@ -52,7 +52,7 @@ export default function RenewalRemindersPage() {
   const columns: Column<SubscriptionData>[] = [
     {
       key: 'subscription',
-      header: 'Recurring Payment',
+      header: 'Subscription',
       render: (row) => (
         <div className="flex items-center gap-3">
           <SubscriptionLogo name={row.name} />

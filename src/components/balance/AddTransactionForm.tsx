@@ -240,10 +240,10 @@ export default function AddTransactionForm({
                 <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                   <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
                   <div className="text-xs text-amber-800 leading-relaxed font-medium">
-                    <span className="font-bold">Linked to recurring payment:</span> Amount,
+                    <span className="font-bold">Linked to subscription:</span> Amount,
                     date, and transaction type are locked to maintain recurrence schedule
                     integrity. You can edit the description, category, and receipt. To reverse this
-                    payment, use <strong>Undo Payment</strong> from the recurring payment details.
+                    payment, use <strong>Undo Payment</strong> from the subscription details.
                   </div>
                 </div>
               )}

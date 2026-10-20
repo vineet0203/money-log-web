@@ -23,7 +23,7 @@ import Reveal from "@/components/ui/Reveal";
 export const metadata = {
   title: "Reports | moneylog.com",
   description:
-    "View detailed reports for your bills, transactions, recurring payments and loans — filter by date range, account or category and see exactly where your money goes.",
+    "View detailed reports for your bills, transactions, subscriptions and loans — filter by date range, account or category and see exactly where your money goes.",
 };
 
 const HIGHLIGHTS = [
@@ -31,7 +31,7 @@ const HIGHLIGHTS = [
     icon: FolderOpen,
     tile: "bg-brand-green",
     title: "Multiple Report Types",
-    description: "Bills, recurring payments, loans, transactions & more.",
+    description: "Bills, subscriptions, loans, transactions & more.",
   },
   {
     icon: Filter,
@@ -61,8 +61,8 @@ const REPORTS = [
     icon: RefreshCw,
     badge: "bg-violet-100 text-violet-600",
     card: "bg-violet-50/60",
-    title: "Recurring Payments Report",
-    description: "Track your recurring payments and the dates they renew.",
+    title: "Subscriptions Report",
+    description: "Track your subscriptions and the dates they renew.",
     points: ["See every active plan", "Catch renewals early"],
   },
   {
@@ -158,7 +158,7 @@ const STEPS = [
     tile: "bg-blue-500",
     title: "Select Report Type",
     description:
-      "Pick from bills, transactions, recurring payments, loans and more.",
+      "Pick from bills, transactions, subscriptions, loans and more.",
   },
   {
     num: "2",
@@ -215,7 +215,7 @@ export default function ReportsPage() {
 
               <p className="mt-5 max-w-xl text-base leading-relaxed font-medium text-pretty text-slate-600 sm:text-lg lg:mt-6 lg:text-xl">
                 View detailed reports for your bills, transactions,
-                recurring payments and loans. Filter by date range, account or
+                subscriptions and loans. Filter by date range, account or
                 category and get the insights you need to make better financial
                 decisions.
               </p>
@@ -251,7 +251,7 @@ export default function ReportsPage() {
               />
               <Image
                 src="/reports_dashboard_mockup.png"
-                alt="moneylog budgeting dashboard showing monthly budget, upcoming transactions, recurring payments and EMI overview"
+                alt="moneylog budgeting dashboard showing monthly budget, upcoming transactions, subscriptions and EMI overview"
                 width={1493}
                 height={895}
                 sizes="(min-width: 1280px) 760px, 100vw"

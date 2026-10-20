@@ -15,9 +15,9 @@ export function AddSubscriptionCard({ onClick }: Props) {
         <Plus className="text-[#159A1D]" size={36} strokeWidth={2.5} />
       </div>
       <div>
-        <h3 className="text-sm font-bold text-white">Add Recurring Payment</h3>
+        <h3 className="text-sm font-bold text-white">Add Subscription</h3>
         <p className="text-xs text-white/90 mt-1.5 leading-snug">
-          Add a new recurring payment to get started.
+          Add a new subscription to get started.
         </p>
       </div>
     </button>

@@ -7,7 +7,7 @@ import PricingCards from "@/components/PricingCards";
 const TABLE_DATA = [
   { feature: "Dashboard & account tracking", free: true, pro: true, business: true },
   { feature: "Transactions & bank integrations", free: "Up to 3", pro: true, business: true },
-  { feature: "Bills, recurring payments & notifications", free: false, pro: true, business: true },
+  { feature: "Bills, subscriptions & notifications", free: false, pro: true, business: true },
   { feature: "Budgeting & monthly planning", free: false, pro: true, business: true },
   { feature: "Reports & downloads", free: "Basic", pro: true, business: true },
   { feature: "Advanced insights & unlimited history", free: false, pro: true, business: true },

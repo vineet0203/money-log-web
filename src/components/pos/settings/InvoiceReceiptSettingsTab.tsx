@@ -9,7 +9,6 @@ import {
   QrCode, 
   Image as ImageIcon, 
   FileText, 
-  Printer, 
   Save, 
   RotateCcw, 
   Check, 
@@ -18,13 +17,17 @@ import {
   Smartphone,
   Eye,
   Percent,
-  Plus
+  Plus,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PosReceiptSettings, PaperWidth, PosTaxRate, DEFAULT_RECEIPT_SETTINGS } from './types';
+import { PosReceiptSettings, PosTaxRate, DEFAULT_RECEIPT_SETTINGS } from './types';
+import { useGetProfile } from '@/hooks/queries/user';
 
 export function InvoiceReceiptSettingsTab() {
   const { receiptSettings, saveSettings, resetToDefaults, isSaving, isLoading } = usePosSettings();
+  const { data: profile } = useGetProfile();
+  const currentUserName = profile?.name?.trim() || profile?.email || '';
 
   // Local draft state for smooth editing and explicit "Save Changes"
   const [formData, setFormData] = useState<PosReceiptSettings>(receiptSettings);
@@ -244,6 +247,35 @@ export function InvoiceReceiptSettingsTab() {
                     </div>
                   </div>
                 </div>
+
+                {/* Cashier / Operator Name */}
+                <div className="sm:col-span-2 space-y-1.5 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <User size={13} className="text-[#159A1D]" />
+                      Default Cashier / Operator Name
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-500 font-medium select-none">
+                      <input
+                        type="checkbox"
+                        checked={formData.showCashierName !== false}
+                        onChange={e => handleChange('showCashierName', e.target.checked)}
+                        className="rounded border-slate-300 text-[#159A1D] focus:ring-[#159A1D]"
+                      />
+                      <span>Show Cashier on receipt</span>
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.cashierName || ''}
+                    onChange={e => handleChange('cashierName', e.target.value)}
+                    placeholder={currentUserName ? `Default: ${currentUserName} (Current User)` : 'e.g. John Doe (Leave empty to use current user)'}
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20 font-medium"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Printed on receipts under &quot;Cashier:&quot;. If left blank, your logged-in profile name ({currentUserName || 'current user'}) will be used automatically.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -451,7 +483,7 @@ export function InvoiceReceiptSettingsTab() {
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                     <Smartphone size={14} className="text-[#159A1D]" />
-                    UPI Payment & Dynamic QR Code Settings
+                    UPI Payment & QR Code Settings
                   </h4>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     Displayed during checkout and printed directly on customer receipts.
@@ -503,102 +535,53 @@ export function InvoiceReceiptSettingsTab() {
                   </p>
                 </div>
 
-                {/* QR Code Style Selector */}
-                <div className="sm:col-span-2 space-y-3 pt-2">
+                {/* QR Code Upload Only */}
+                <div className="sm:col-span-2 space-y-2 pt-1">
                   <label className="text-xs font-semibold text-slate-700 block">
-                    QR Code Display Mode
+                    Bank Standee QR Code Image
                   </label>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label 
-                      onClick={() => handleChange('upiQrType', 'auto')}
-                      className={`p-3 border rounded-xl cursor-pointer transition-all flex items-start gap-3 ${
-                        formData.upiQrType === 'auto'
-                          ? 'border-[#159A1D] bg-emerald-50/40 text-slate-900 shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="qrType"
-                        checked={formData.upiQrType === 'auto'}
-                        onChange={() => handleChange('upiQrType', 'auto')}
-                        className="mt-1 text-[#159A1D] focus:ring-[#159A1D]"
-                      />
-                      <div>
-                        <span className="font-bold text-xs block">Auto-Generated Dynamic QR</span>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Renders dynamic QR from your UPI ID automatically on checkout and prints.
-                        </p>
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-4">
+                    {formData.upiQrImageUrl ? (
+                      <div className="relative group bg-white p-1 border border-slate-200 rounded-lg shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={formData.upiQrImageUrl} 
+                          alt="Custom QR Preview" 
+                          className="w-14 h-14 object-contain"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleChange('upiQrImageUrl', '');
+                          }}
+                          title="Remove custom QR"
+                          className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white p-0.5 rounded-full hover:bg-rose-600 transition-colors shadow-xs"
+                        >
+                          <Trash2 size={10} />
+                        </button>
                       </div>
-                    </label>
-
-                    <label 
-                      onClick={() => handleChange('upiQrType', 'custom')}
-                      className={`p-3 border rounded-xl cursor-pointer transition-all flex items-start gap-3 ${
-                        formData.upiQrType === 'custom'
-                          ? 'border-[#159A1D] bg-emerald-50/40 text-slate-900 shadow-2xs'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="qrType"
-                        checked={formData.upiQrType === 'custom'}
-                        onChange={() => handleChange('upiQrType', 'custom')}
-                        className="mt-1 text-[#159A1D] focus:ring-[#159A1D]"
-                      />
-                      <div>
-                        <span className="font-bold text-xs block">Custom Bank Standee QR Image</span>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Upload official bank QR standee image provided by your payment provider.
-                        </p>
+                    ) : (
+                      <div className="w-14 h-14 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 bg-white shrink-0">
+                        <QrCode size={22} />
                       </div>
-                    </label>
-                  </div>
+                    )}
 
-                  {formData.upiQrType === 'custom' && (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-4 mt-2">
-                      {formData.upiQrImageUrl ? (
-                        <div className="relative group bg-white p-1 border border-slate-200 rounded-lg shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={formData.upiQrImageUrl} 
-                            alt="Custom QR Preview" 
-                            className="w-14 h-14 object-contain"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleChange('upiQrImageUrl', '')}
-                            title="Remove custom QR"
-                            className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white p-0.5 rounded-full hover:bg-rose-600 transition-colors shadow-xs"
-                          >
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="w-14 h-14 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 bg-white shrink-0">
-                          <QrCode size={22} />
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-all shadow-2xs">
-                          <Upload size={13} />
-                          <span>{formData.upiQrImageUrl ? 'Change QR Image' : 'Upload Bank QR Image'}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleCustomQrUpload}
-                            className="hidden"
-                          />
-                        </label>
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          PNG or JPG format. Will be resized cleanly for the thermal print layout.
-                        </p>
-                      </div>
+                    <div>
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold transition-all shadow-2xs">
+                        <Upload size={13} />
+                        <span>{formData.upiQrImageUrl ? 'Change QR Image' : 'Upload Bank QR Image'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCustomQrUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        PNG or JPG format. Upload official bank QR standee image provided by your payment provider.
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -718,81 +701,6 @@ export function InvoiceReceiptSettingsTab() {
                     placeholder="e.g. Returns accepted within 14 days with original receipt."
                     className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#159A1D]/20"
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 6: Formatting & Print Toggles */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <Printer size={14} className="text-[#159A1D]" />
-                  Thermal Printer & Layout Preferences
-                </h4>
-                <span className="text-[11px] text-slate-400">Roll width & content toggles</span>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-2">Default Receipt Roll Width</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['80mm', '58mm', 'A4'] as PaperWidth[]).map(size => (
-                      <button
-                        type="button"
-                        key={size}
-                        onClick={() => handleChange('paperSize', size)}
-                        className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all text-center ${
-                          formData.paperSize === size
-                            ? 'bg-[#159A1D]/10 border-[#159A1D] text-[#159A1D]'
-                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        {size === '80mm' ? '80mm (Standard POS)' : size === '58mm' ? '58mm (Mobile POS)' : 'A4 (Full Invoice)'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                  <label className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 hover:bg-slate-50/50 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={formData.showTaxBreakdown}
-                      onChange={e => handleChange('showTaxBreakdown', e.target.checked)}
-                      className="rounded text-[#159A1D] focus:ring-[#159A1D] h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700">Print Tax Breakdown Row</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 hover:bg-slate-50/50 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={formData.showCashierName}
-                      onChange={e => handleChange('showCashierName', e.target.checked)}
-                      className="rounded text-[#159A1D] focus:ring-[#159A1D] h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700">Print Cashier / Register ID</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 hover:bg-slate-50/50 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={formData.showCustomerInfo}
-                      onChange={e => handleChange('showCustomerInfo', e.target.checked)}
-                      className="rounded text-[#159A1D] focus:ring-[#159A1D] h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700">Print Customer Name</span>
-                  </label>
-
-                  <label className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 hover:bg-slate-50/50 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={formData.autoPrintReceipt}
-                      onChange={e => handleChange('autoPrintReceipt', e.target.checked)}
-                      className="rounded text-[#159A1D] focus:ring-[#159A1D] h-4 w-4"
-                    />
-                    <span className="font-medium text-slate-700">Auto-Print upon Checkout</span>
-                  </label>
                 </div>
               </div>
             </div>
