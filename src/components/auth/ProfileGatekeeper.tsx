@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useGetProfile } from '@/hooks/queries/user';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logoutUser } from '@/lib/axios';
 
 export function ProfileGatekeeper({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const { data: profile, isLoading, isError, error, refetch } = useGetProfile();
-
-  useEffect(() => {
-    // If the query finishes and there's no name, redirect to complete-profile
-    if (!isLoading && profile && !profile.name) {
-      router.replace('/complete-profile');
-    }
-  }, [profile, isLoading, router]);
 
   // Immediately logout if unauthenticated (401) or user account no longer exists in database (404)
   useEffect(() => {

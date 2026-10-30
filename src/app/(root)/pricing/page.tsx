@@ -2,7 +2,7 @@
 
 import { Check, Shield, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import PricingCards from "@/components/PricingCards";
+import PricingCards from "@/components/landing/PricingCards";
 
 const TABLE_DATA = [
   { feature: "Dashboard & account tracking", free: true, pro: true, business: true },

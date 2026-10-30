@@ -89,8 +89,20 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const isAuthRoute =
+    const isLoginOrAuthAction =
       originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/signup') ||
+      originalRequest.url?.includes('/auth/verify-email-otp') ||
+      originalRequest.url?.includes('/auth/resend-email-otp') ||
+      originalRequest.url?.includes('/auth/forgot-password') ||
+      originalRequest.url?.includes('/auth/reset-password');
+
+    // For login or signup action endpoints, reject directly so forms can display validation/auth errors
+    if (isLoginOrAuthAction) {
+      return Promise.reject(error);
+    }
+
+    const isAuthRoute =
       originalRequest.url?.includes('/auth/send-otp') ||
       originalRequest.url?.includes('/auth/verify-otp') ||
       originalRequest.url?.includes('/auth/clear-cookies') ||

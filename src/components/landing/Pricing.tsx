@@ -1,7 +1,7 @@
 "use client";
 
 import Reveal from "@/components/ui/Reveal";
-import PricingCards from "@/components/PricingCards";
+import PricingCards from "@/components/landing/PricingCards";
 
 export default function Pricing() {
   return (

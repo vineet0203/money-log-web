@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import 'react-phone-number-input/style.css';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 
 const COMMON_TIMEZONES = [
   { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST, GMT+05:30)' },
@@ -51,12 +53,12 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
 
   // Form states initialized directly from profile
   const [name, setName] = useState(profile.name || '');
-  const [email, setEmail] = useState(profile.email || '');
+  const [phone, setPhone] = useState<string | undefined>(profile.phone_number || undefined);
   const [timezone, setTimezone] = useState(profile.timezone || 'UTC');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPhotoRemoved, setIsPhotoRemoved] = useState(false);
-  const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Clean up preview object URL on unmount or file change
   useEffect(() => {
@@ -107,12 +109,12 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
 
   const handleReset = () => {
     setName(profile.name || '');
-    setEmail(profile.email || '');
+    setPhone(profile.phone_number || undefined);
     setTimezone(profile.timezone || 'UTC');
     setSelectedFile(null);
     setPreviewUrl(null);
     setIsPhotoRemoved(false);
-    setEmailError(null);
+    setPhoneError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -120,7 +122,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
 
   const isDirty = Boolean(
     name !== (profile.name || '') ||
-      email !== (profile.email || '') ||
+      (phone || '') !== (profile.phone_number || '') ||
       timezone !== (profile.timezone || 'UTC') ||
       selectedFile !== null ||
       (isPhotoRemoved && profile.profile_image_url)
@@ -128,12 +130,11 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmailError(null);
+    setPhoneError(null);
 
-    if (email && email.trim() !== '') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        setEmailError('Please enter a valid email address');
+    if (phone && phone.trim() !== '') {
+      if (!isValidPhoneNumber(phone)) {
+        setPhoneError('Please enter a valid phone number for the selected country');
         return;
       }
     }
@@ -143,19 +144,19 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
         const formData = new FormData();
         formData.append('profile_image', selectedFile);
         formData.append('name', name.trim());
-        formData.append('email', email.trim());
+        if (phone) formData.append('phone_number', phone.trim());
         formData.append('timezone', timezone);
 
         await updateProfileMutation.mutateAsync(formData);
       } else {
         const payload: {
           name: string;
-          email: string;
+          phone_number?: string | null;
           timezone: string;
           remove_profile_image?: boolean;
         } = {
           name: name.trim(),
-          email: email.trim(),
+          phone_number: phone ? phone.trim() : null,
           timezone,
         };
 
@@ -171,12 +172,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
       console.error('Profile update error:', err);
       const errorObj = err as { response?: { status?: number; data?: { error?: string } }; message?: string };
       const serverMsg = errorObj.response?.data?.error || errorObj.message || 'Failed to update profile';
-      if (errorObj.response?.status === 409 || serverMsg.toLowerCase().includes('email')) {
-        setEmailError(serverMsg);
-        enqueueSnackbar(serverMsg, { variant: 'error' });
-      } else {
-        enqueueSnackbar(serverMsg, { variant: 'error' });
-      }
+      enqueueSnackbar(serverMsg, { variant: 'error' });
     }
   };
 
@@ -247,7 +243,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                {email || profile.email || 'No email registered'} · {profile.phone_number}
+                {profile.email || 'No email registered'} {phone ? `· ${phone}` : profile.phone_number ? `· ${profile.phone_number}` : ''}
               </p>
               {memberSinceDate && (
                 <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium pt-0.5">
@@ -306,48 +302,60 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
               </p>
             </div>
 
-            {/* Email Address */}
-            <div>
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (emailError) setEmailError(null);
-                }}
-                leftIcon={<Mail size={16} />}
-                error={emailError || undefined}
-                sizeVariant="md"
-              />
-              <p className="text-[11px] text-slate-400 mt-1 pl-1 font-medium">
-                Used for notification summaries, renewal reminders, and receipts.
-              </p>
-            </div>
-
-            {/* Phone Number (Verified Identity - Locked) */}
+            {/* Email Address (Verified Primary Identity - Locked) */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs sm:text-sm font-semibold text-slate-700">
-                  Phone Number
+                  Email Address
                 </label>
                 <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
-                  <Check className="w-3 h-3" /> OTP Primary ID
+                  <Check className="w-3 h-3" /> Primary ID
                 </span>
               </div>
               <div className="relative">
                 <Input
-                  value={profile.phone_number}
+                  value={profile.email || ''}
                   disabled
                   readOnly
-                  leftIcon={<Phone size={16} />}
+                  leftIcon={<Mail size={16} />}
                   sizeVariant="md"
-                  className="bg-slate-50 text-slate-500 font-mono cursor-not-allowed border-slate-200"
+                  className="bg-slate-50 text-slate-500 font-medium cursor-not-allowed border-slate-200"
                 />
               </div>
               <p className="text-[11px] text-slate-400 mt-1 pl-1 font-medium">
-                Your phone number is your secure login credential.
+                Your email is your verified primary login ID and cannot be changed.
+              </p>
+            </div>
+
+            {/* Mobile Number (Editable) */}
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-1">
+                Mobile Number
+              </label>
+              <div
+                className={`flex items-center w-full rounded-xl border bg-white px-3.5 text-sm transition-all shadow-xs focus-within:ring-2 [&_.PhoneInputInput]:py-2.5 [&_.PhoneInputInput]:text-sm [&_.PhoneInputInput]:font-medium [&_.PhoneInputInput]:text-slate-900 [&_.PhoneInputInput]:placeholder:text-slate-400 [&_.PhoneInputCountry]:mr-2.5 ${
+                  phoneError
+                    ? 'border-rose-500 focus-within:border-rose-500 focus-within:ring-rose-500/20'
+                    : 'border-slate-200 focus-within:border-[#159A1D] focus-within:ring-[#159A1D]/20'
+                }`}
+              >
+                <PhoneInput
+                  international
+                  defaultCountry="US"
+                  value={phone}
+                  onChange={(val) => {
+                    setPhone(val);
+                    if (phoneError) setPhoneError(null);
+                  }}
+                  className="w-full text-sm font-medium"
+                  placeholder="Enter mobile number"
+                />
+              </div>
+              {phoneError && (
+                <p className="text-xs font-semibold text-rose-500 mt-1">{phoneError}</p>
+              )}
+              <p className="text-[11px] text-slate-400 mt-1 pl-1 font-medium">
+                Used for SMS notifications, security alerts, and contact.
               </p>
             </div>
 

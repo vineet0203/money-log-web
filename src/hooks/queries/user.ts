@@ -3,7 +3,7 @@ import api from '@/lib/axios';
 
 export interface UserProfile {
   id: number;
-  phone_number: string;
+  phone_number?: string | null;
   name?: string | null;
   email?: string | null;
   profile_image_url?: string | null;

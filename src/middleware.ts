@@ -10,7 +10,13 @@ export function middleware(request: NextRequest) {
   // Handle explicit clear/logout request
   if (isClearRequested) {
     // If accessing an auth page with clear flag, delete cookies and allow page to render directly
-    if (pathname.startsWith('/login') || pathname.startsWith('/verify-otp')) {
+    if (
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/signup') ||
+      pathname.startsWith('/forgot-password') ||
+      pathname.startsWith('/reset-password') ||
+      pathname.startsWith('/verify-email')
+    ) {
       const response = NextResponse.next();
       response.cookies.delete('accessToken');
       response.cookies.delete('refreshToken');
@@ -28,7 +34,12 @@ export function middleware(request: NextRequest) {
   const hasToken = request.cookies.has('accessToken') || request.cookies.has('refreshToken');
 
   // Define route groupings
-  const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/verify-otp');
+  const isAuthRoute =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/verify-email');
   
   // Define protected routes (dashboard group)
   // These are routes that absolutely require authentication
@@ -40,7 +51,6 @@ export function middleware(request: NextRequest) {
     '/payables',
     '/budget',
     '/goals',
-    '/complete-profile',
     '/notifications',
     '/profile',
     '/settings',

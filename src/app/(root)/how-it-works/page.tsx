@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import HowItWorksJourney from "@/components/HowItWorksJourney";
+import HowItWorksJourney from "@/components/landing/HowItWorksJourney";
 
 export const metadata = {
   title: "How It Works | moneylog.com",
